@@ -19,6 +19,17 @@
 	margin-block: auto !important;
 }
 
+// Dialog buttons keep their natural width instead of being squeezed by
+// the actions row until their labels ellipsize (German labels tend to
+// run long); when space really runs out, the row wraps instead.
+.dialog__actions {
+	flex-wrap: wrap;
+
+	.button-vue {
+		flex-shrink: 0;
+	}
+}
+
 .app-navigation-spacer {
 	list-style-type: none;
 }

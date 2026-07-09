@@ -603,6 +603,63 @@ export default defineStore('calendars', {
 		},
 
 		/**
+		 * Set the time transparency of all existing events in a calendar,
+		 * so they match the calendar's transparency. New events inherit the
+		 * calendar setting on creation; this aligns the events created
+		 * before the setting was changed. Events already matching are left
+		 * untouched, including their recurrence exceptions.
+		 *
+		 * @param {object} data destructuring object
+		 * @param {object} data.calendar the calendar whose events to update
+		 * @param {string} data.transparency the transparency to set ('TRANSPARENT' or 'OPAQUE')
+		 * @return {Promise<{updated: number, failed: number}>} number of updated and failed calendar objects
+		 */
+		async alignCalendarEventsTransparency({ calendar, transparency }) {
+			const response = await calendar.dav.findByType('VEVENT')
+
+			const limit = pLimit(4)
+			let updated = 0
+			let failed = 0
+			await Promise.all(response.map((dav) => limit(async () => {
+				try {
+					const calendarObject = mapCDavObjectToCalendarObject(dav, calendar.id)
+					let changed = false
+					for (const component of calendarObject.calendarComponent.getVObjectIterator()) {
+						if (component.name !== 'VEVENT') {
+							continue
+						}
+						// TRANSP defaults to OPAQUE when absent (RFC 5545)
+						if ((component.timeTransparency ?? 'OPAQUE') !== transparency) {
+							component.timeTransparency = transparency
+							changed = true
+						}
+					}
+					if (!changed) {
+						return
+					}
+					dav.data = calendarObject.calendarComponent.toICS()
+					await dav.update()
+					updated++
+				} catch (error) {
+					failed++
+					logger.error('Failed to update the transparency of an event', { error })
+				}
+			})))
+
+			if (updated > 0) {
+				// The updated objects are not tracked individually here;
+				// dropping the fetched ranges makes the grid refetch them
+				const fetchedTimeRangesStore = useFetchedTimeRangesStore()
+				const calendarObjectsStore = useCalendarObjectsStore()
+				fetchedTimeRangesStore.clearFetchedTimeRanges()
+				this.calendarsById[calendar.id].fetchedTimeRanges = []
+				calendarObjectsStore.modificationCount++
+			}
+
+			return { updated, failed }
+		},
+
+		/**
 		 * Change a calendar's default alarms for part-day and full-day events
 		 *
 		 * @param {object} data destructuring object

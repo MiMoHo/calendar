@@ -119,12 +119,19 @@
 			</div>
 		</div>
 	</NcModal>
+	<NcDialog
+		:open="showAlignEventsDialog"
+		:name="$t('calendar', 'Update existing events?')"
+		:message="alignEventsDialogMessage"
+		:buttons="alignEventsDialogButtons"
+		size="normal"
+		@update:open="alignEventsDialogClosed" />
 </template>
 
 <script>
-import { showError } from '@nextcloud/dialogs'
+import { showError, showSuccess } from '@nextcloud/dialogs'
 import { getLanguage } from '@nextcloud/l10n'
-import { NcAppNavigationSpacer, NcButton, NcCheckboxRadioSwitch, NcColorPicker, NcModal, NcSelect, NcTextField } from '@nextcloud/vue'
+import { NcAppNavigationSpacer, NcButton, NcCheckboxRadioSwitch, NcColorPicker, NcDialog, NcModal, NcSelect, NcTextField } from '@nextcloud/vue'
 import { mapStores } from 'pinia'
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import CloseIcon from 'vue-material-design-icons/Close.vue'
@@ -163,6 +170,7 @@ export default {
 		InternalLink,
 		NcAppNavigationSpacer,
 		NcCheckboxRadioSwitch,
+		NcDialog,
 	},
 
 	data() {
@@ -175,6 +183,8 @@ export default {
 			selectedDefaultAlarmPartDay: null,
 			selectedDefaultAlarmFullDay: null,
 			defaultAlarmChanged: false,
+			showAlignEventsDialog: false,
+			alignEventsTransparency: null,
 		}
 	},
 
@@ -330,6 +340,41 @@ export default {
 		isAfterVersion() {
 			return isAfterVersion(34)
 		},
+
+		/**
+		 * Question of the dialog offering to align the existing events
+		 * with the changed calendar transparency.
+		 *
+		 * @return {string}
+		 */
+		alignEventsDialogMessage() {
+			if (this.alignEventsTransparency === 'TRANSPARENT') {
+				return this.$t('calendar', 'Should all existing events of this calendar also be shown as available?')
+			}
+			return this.$t('calendar', 'Should all existing events of this calendar also be shown as busy?')
+		},
+
+		/**
+		 * Buttons of the dialog offering to align the existing events.
+		 * The dialog closes after the chosen callback settles; closing it
+		 * (by whatever means) also closes the modal.
+		 *
+		 * @return {object[]}
+		 */
+		alignEventsDialogButtons() {
+			return [
+				{
+					label: this.$t('calendar', 'Keep events unchanged'),
+					variant: 'secondary',
+					callback: () => {},
+				},
+				{
+					label: this.$t('calendar', 'Update events'),
+					variant: 'primary',
+					callback: async () => this.alignEvents(),
+				},
+			]
+		},
 	},
 
 	watch: {
@@ -456,6 +501,7 @@ export default {
 			if (!this.isCalendarNameValid) {
 				return
 			}
+			const transparencyChanged = this.isTransparent !== (this.calendar.transparency === 'transparent')
 			try {
 				if (this.calendarColorChanged) {
 					await this.saveColor()
@@ -469,8 +515,56 @@ export default {
 				}
 			} catch (error) {
 				showError(this.$t('calendar', 'Failed to save calendar name and color'))
+				this.closeModal()
+				return
 			}
 
+			// The calendar transparency only covers events created from now
+			// on; offer to align the existing ones, so nobody has to batch
+			// edit them outside of the app. The modal stays open (the dialog
+			// needs its calendar) and closes together with the dialog.
+			if (transparencyChanged) {
+				this.alignEventsTransparency = this.isTransparent ? 'TRANSPARENT' : 'OPAQUE'
+				this.showAlignEventsDialog = true
+				return
+			}
+
+			this.closeModal()
+		},
+
+		/**
+		 * Set the time transparency of all existing events of the calendar
+		 * to the newly saved calendar transparency.
+		 */
+		async alignEvents() {
+			try {
+				const { updated, failed } = await this.calendarsStore.alignCalendarEventsTransparency({
+					calendar: this.calendar,
+					transparency: this.alignEventsTransparency,
+				})
+				if (failed > 0) {
+					showError(this.$n('calendar', '%n event could not be updated', '%n events could not be updated', failed))
+				} else if (updated === 0) {
+					showSuccess(this.$t('calendar', 'All events already match the calendar setting'))
+				} else {
+					showSuccess(this.$n('calendar', '%n event updated', '%n events updated', updated))
+				}
+			} catch (error) {
+				logger.error('Failed to update the events of the calendar', { error })
+				showError(this.$t('calendar', 'Failed to update the events of the calendar'))
+			}
+		},
+
+		/**
+		 * Close the modal together with the align-events dialog.
+		 *
+		 * @param {boolean} open The new open state of the dialog
+		 */
+		alignEventsDialogClosed(open) {
+			if (open) {
+				return
+			}
+			this.showAlignEventsDialog = false
 			this.closeModal()
 		},
 
