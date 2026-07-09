@@ -61,6 +61,7 @@ describe('store/settings test suite', () => {
 			attachmentsFolderCreated: false,
 			showResources: true,
 			publicCalendars: null,
+			subscriptionTransparencyOverrides: {},
 			searchQuery: '',
 		})
 	})
@@ -121,6 +122,7 @@ describe('store/settings test suite', () => {
 			attachmentsFolder: '/Attachments',
 			showResources: true,
 			publicCalendars: null,
+			subscriptionTransparencyOverrides: { 'sub-1': 'opaque' },
 		}
 
 		settingsStore.loadSettingsFromServer(settings)
@@ -150,6 +152,7 @@ Initial settings:
 	- attachmentsFolder: /Attachments
 	- ShowResources: true
 	- PublicCalendars: null
+	- SubscriptionTransparencyOverrides: {"sub-1":"opaque"}
 `)
 		expect(settingsStore.$state).toEqual({
 			appVersion: '2.1.0',
@@ -177,6 +180,7 @@ Initial settings:
 			attachmentsFolderCreated: false,
 			showResources: true,
 			publicCalendars: null,
+			subscriptionTransparencyOverrides: { 'sub-1': 'opaque' },
 			searchQuery: '',
 		})
 	})

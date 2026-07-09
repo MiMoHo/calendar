@@ -500,4 +500,79 @@ class SettingsControllerTest extends TestCase {
 		$this->assertEquals([], $actual->getData());
 		$this->assertEquals(400, $actual->getStatus());
 	}
+
+	public function testSetSubscriptionTransparencyOverride():void {
+		$this->config->expects($this->once())
+			->method('getUserValue')
+			->with('user123', $this->appName, 'subscriptionTransparencyOverrides', '{}')
+			->willReturn('{"other-calendar":"opaque"}');
+		$this->config->expects($this->once())
+			->method('setUserValue')
+			->with('user123', $this->appName, 'subscriptionTransparencyOverrides',
+				'{"other-calendar":"opaque","sub-1":"transparent"}');
+
+		$actual = $this->controller->setConfig('subscriptionTransparencyOverride',
+			'{"calendarId":"sub-1","transparency":"transparent"}');
+
+		$this->assertInstanceOf('OCP\AppFramework\Http\JSONResponse', $actual);
+		$this->assertEquals([], $actual->getData());
+		$this->assertEquals(200, $actual->getStatus());
+	}
+
+	public function testSetSubscriptionTransparencyOverrideRemoval():void {
+		$this->config->expects($this->once())
+			->method('getUserValue')
+			->with('user123', $this->appName, 'subscriptionTransparencyOverrides', '{}')
+			->willReturn('{"sub-1":"transparent"}');
+		$this->config->expects($this->once())
+			->method('setUserValue')
+			->with('user123', $this->appName, 'subscriptionTransparencyOverrides', '[]');
+
+		$actual = $this->controller->setConfig('subscriptionTransparencyOverride',
+			'{"calendarId":"sub-1","transparency":""}');
+
+		$this->assertInstanceOf('OCP\AppFramework\Http\JSONResponse', $actual);
+		$this->assertEquals(200, $actual->getStatus());
+	}
+
+	/**
+	 * @dataProvider setSubscriptionTransparencyOverrideWithInvalidValueDataProvider
+	 */
+	public function testSetSubscriptionTransparencyOverrideWithInvalidValue(string $value):void {
+		$this->config->expects($this->never())
+			->method('setUserValue');
+
+		$actual = $this->controller->setConfig('subscriptionTransparencyOverride', $value);
+
+		$this->assertInstanceOf('OCP\AppFramework\Http\JSONResponse', $actual);
+		$this->assertEquals([], $actual->getData());
+		$this->assertEquals(422, $actual->getStatus());
+	}
+
+	public function setSubscriptionTransparencyOverrideWithInvalidValueDataProvider():array {
+		return [
+			['not json'],
+			['{"calendarId":"sub-1"}'],
+			['{"transparency":"opaque"}'],
+			['{"calendarId":"","transparency":"opaque"}'],
+			['{"calendarId":"sub-1","transparency":"busy"}'],
+			['{"calendarId":42,"transparency":"opaque"}'],
+			['{"calendarId":"' . str_repeat('x', 256) . '","transparency":"opaque"}'],
+		];
+	}
+
+	public function testSetSubscriptionTransparencyOverrideWithException():void {
+		$this->config->expects($this->once())
+			->method('getUserValue')
+			->willReturn('{}');
+		$this->config->expects($this->once())
+			->method('setUserValue')
+			->will($this->throwException(new \Exception));
+
+		$actual = $this->controller->setConfig('subscriptionTransparencyOverride',
+			'{"calendarId":"sub-1","transparency":"opaque"}');
+
+		$this->assertInstanceOf('OCP\AppFramework\Http\JSONResponse', $actual);
+		$this->assertEquals(500, $actual->getStatus());
+	}
 }

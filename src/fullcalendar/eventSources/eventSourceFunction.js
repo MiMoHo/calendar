@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 import { translate as t } from '@nextcloud/l10n'
+import useCalendarObjectsStore from '../../store/calendarObjects.js'
 import usePrincipalsStore from '../../store/principals.js'
 import useSettingsStore from '../../store/settings.js'
 import useTasksStore from '../../store/unscheduledTasks.js'
@@ -38,13 +39,74 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 
 	const searchTerms = settingsStore.searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean)
 
-	const fcEvents = []
+	// Read-only calendars (e.g. webcal subscriptions) can carry a display
+	// override for the busy status of their events: their events cannot be
+	// edited (the next sync would revert them), so the override replaces
+	// the per-event TRANSP delivered by the source
+	const transparencyOverride = settingsStore.subscriptionTransparencyOverrides?.[calendar.id] ?? null
+
+	// The week/day grids let title and description flow into the free slots
+	// below an event. How far they may flow travels as a quantized class:
+	// the number of display slots between the event's end and the next
+	// timed event, so the text always stops one line short of it (see the
+	// fc-event-nc-flow-* rules in the CSS). Slots follow the user's slot
+	// duration, matching fullcalendar's em-based slot height. Events of
+	// OTHER calendars count too, from the already fetched objects: sources
+	// resolve one calendar at a time, so the earliest render of a view may
+	// briefly miss a neighbour, corrected with the next refetch.
+	const slotMinutes = (() => {
+		const parts = (settingsStore.slotDuration || '00:30:00').split(':').map(Number)
+		return Math.max(5, (parts[0] || 0) * 60 + (parts[1] || 0))
+	})()
+	const timedIntervals = []
+	const objectsInRange = new Map()
 	for (const calendarObject of calendarObjects) {
-		let allObjectsInTimeRange
 		try {
-			allObjectsInTimeRange = getAllObjectsInTimeRange(calendarObject, start, end)
+			const objects = getAllObjectsInTimeRange(calendarObject, start, end)
+			objectsInRange.set(calendarObject, objects)
+			for (const object of objects) {
+				if (object.name === 'VEVENT' && !object.isAllDay() && object.startDate) {
+					timedIntervals.push({
+						start: object.startDate.getInTimezone(timezone).jsDate.getTime(),
+						end: object.endDate ? object.endDate.getInTimezone(timezone).jsDate.getTime() : null,
+					})
+				}
+			}
 		} catch (error) {
 			logger.error(error.message)
+		}
+	}
+	const calendarObjectsStore = useCalendarObjectsStore()
+	for (const otherObject of Object.values(calendarObjectsStore.calendarObjects)) {
+		if (otherObject.calendarId === calendar.id || !otherObject.isEvent) {
+			continue
+		}
+		try {
+			for (const object of getAllObjectsInTimeRange(otherObject, start, end)) {
+				if (object.name === 'VEVENT' && !object.isAllDay() && object.startDate) {
+					timedIntervals.push({
+						start: object.startDate.getInTimezone(timezone).jsDate.getTime(),
+						end: object.endDate ? object.endDate.getInTimezone(timezone).jsDate.getTime() : null,
+					})
+				}
+			}
+		} catch {
+			// Other calendars only sharpen the flow limit; ignore their errors
+		}
+	}
+	timedIntervals.sort((a, b) => a.start - b.start)
+	const flowSlotsUntilNextEvent = (jsEnd) => {
+		const next = timedIntervals.find((interval) => interval.start >= jsEnd.getTime())
+		if (next === undefined) {
+			return null
+		}
+		return Math.min(32, Math.max(0, Math.floor((next.start - jsEnd.getTime()) / (slotMinutes * 60 * 1000))))
+	}
+
+	const fcEvents = []
+	for (const calendarObject of calendarObjects) {
+		const allObjectsInTimeRange = objectsInRange.get(calendarObject)
+		if (!allObjectsInTimeRange) {
 			continue
 		}
 		for (const object of allObjectsInTimeRange) {
@@ -129,8 +191,12 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 				classNames.push('fc-event-nc-alarms')
 			}
 
-			if (object.name === 'VEVENT' && object.getFirstPropertyFirstValue('TRANSP') === 'TRANSPARENT') {
-				classNames.push('fc-event-nc-free')
+			if (object.name === 'VEVENT') {
+				const transparency = transparencyOverride
+					?? ((object.getFirstPropertyFirstValue('TRANSP') === 'TRANSPARENT') ? 'transparent' : 'opaque')
+				if (transparency === 'transparent') {
+					classNames.push('fc-event-nc-free')
+				}
 			}
 
 			if (object.name === 'VEVENT' && jsStart && jsEnd) {
@@ -160,6 +226,25 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 				}
 
 				if (!object.isAllDay()) {
+					const flowSlots = flowSlotsUntilNextEvent(jsEnd)
+					if (flowSlots !== null) {
+						classNames.push(`fc-event-nc-flow-${flowSlots}`)
+					}
+
+					// The description gets a line budget with a real ellipsis:
+					// every text line is one slot high, the time takes one, the
+					// title up to two; the rest of the box plus the allowed
+					// flow is left for the description (see the
+					// fc-event-nc-desc-lines-* rules in the CSS). Parallel
+					// events flow the same way - their narrow side-by-side
+					// boxes keep the text in its column.
+					if (object.description) {
+						const boxSlots = Math.max(1, Math.round((jsEnd.getTime() - jsStart.getTime()) / (slotMinutes * 60 * 1000)))
+						const overhang = flowSlots === null ? 40 : Math.max(0, flowSlots - 1)
+						const descLines = Math.max(0, Math.min(40, boxSlots + overhang - 3))
+						classNames.push(`fc-event-nc-desc-lines-${descLines}`)
+					}
+
 					// Stacking in the week/day grids follows the start time:
 					// later events paint above the title and description text
 					// flowing out of earlier ones (see the fc-event-nc-starts-*

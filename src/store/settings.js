@@ -43,6 +43,10 @@ export default defineStore('settings', {
 			forceEventAlarmType: false,
 			canSubscribeLink: true,
 			showResources: true,
+			// Display override for the busy status of read-only calendars
+			// (e.g. webcal subscriptions), keyed by calendar id with
+			// 'opaque' or 'transparent'; absent = as delivered
+			subscriptionTransparencyOverrides: {},
 			// user-defined Nextcloud settings
 			momentLocale: 'en',
 			attachmentsFolder: '/Calendar',
@@ -347,8 +351,9 @@ export default defineStore('settings', {
 		 * @param {string} data.attachmentsFolder Default user's attachments folder
 		 * @param {boolean} data.showResources Show or hide the resources tab
 		 * @param {string} data.publicCalendars
+		 * @param {object} data.subscriptionTransparencyOverrides Display overrides for the busy status of read-only calendars, keyed by calendar id
 		 */
-		loadSettingsFromServer({ appVersion, eventLimit, firstRun, showWeekNumbers, showTasks, showWeekends, skipPopover, slotDuration, defaultReminder, defaultReminderPartDay, defaultReminderFullDay, talkEnabled, tasksEnabled, timezone, hideEventExport, forceEventAlarmType, disableAppointments, tasksSidebar, canSubscribeLink, attachmentsFolder, showResources, publicCalendars }) {
+		loadSettingsFromServer({ appVersion, eventLimit, firstRun, showWeekNumbers, showTasks, showWeekends, skipPopover, slotDuration, defaultReminder, defaultReminderPartDay, defaultReminderFullDay, talkEnabled, tasksEnabled, timezone, hideEventExport, forceEventAlarmType, disableAppointments, tasksSidebar, canSubscribeLink, attachmentsFolder, showResources, publicCalendars, subscriptionTransparencyOverrides }) {
 			logInfo(`
 Initial settings:
 	- AppVersion: ${appVersion}
@@ -373,6 +378,7 @@ Initial settings:
 	- attachmentsFolder: ${attachmentsFolder}
 	- ShowResources: ${showResources}
 	- PublicCalendars: ${publicCalendars}
+	- SubscriptionTransparencyOverrides: ${JSON.stringify(subscriptionTransparencyOverrides)}
 `)
 
 			this.appVersion = appVersion
@@ -397,6 +403,28 @@ Initial settings:
 			this.attachmentsFolder = attachmentsFolder
 			this.showResources = showResources
 			this.publicCalendars = publicCalendars
+			this.subscriptionTransparencyOverrides = subscriptionTransparencyOverrides ?? {}
+		},
+
+		/**
+		 * Overrides how the events of a read-only calendar (e.g. a webcal
+		 * subscription) show up: as busy, as free, or as delivered by the
+		 * source. The grids re-render from the already fetched objects.
+		 *
+		 * @param {object} data The destructuring object
+		 * @param {string} data.calendarId The calendar to override
+		 * @param {string} data.transparency 'opaque', 'transparent' or '' (as delivered)
+		 * @return {Promise<void>}
+		 */
+		async setSubscriptionTransparencyOverride({ calendarId, transparency }) {
+			const calendarObjectsStore = useCalendarObjectsStore()
+			await setConfig('subscriptionTransparencyOverride', JSON.stringify({ calendarId, transparency }))
+			if (transparency === '') {
+				delete this.subscriptionTransparencyOverrides[calendarId]
+			} else {
+				this.subscriptionTransparencyOverrides[calendarId] = transparency
+			}
+			calendarObjectsStore.modificationCount++
 		},
 
 		/**

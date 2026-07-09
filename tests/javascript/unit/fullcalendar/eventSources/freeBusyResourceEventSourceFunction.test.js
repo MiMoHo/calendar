@@ -210,7 +210,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: false,
 				start: event11Start,
 				end: event11End,
-				classNames: [ 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-starts-20' ],
+				classNames: [ 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-flow-32', 'fc-event-nc-starts-20' ],
 				extendedProps: {
 					objectId: '1',
 					vobjectId: '1-1',
@@ -234,7 +234,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: false,
 				start: event12Start,
 				end: event12End,
-				classNames: [ 'fc-event-nc-cancelled', 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-starts-20' ],
+				classNames: [ 'fc-event-nc-cancelled', 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-flow-32', 'fc-event-nc-starts-20' ],
 				extendedProps: {
 					objectId: '1',
 					recurrenceId: 456,
@@ -258,7 +258,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: false,
 				start: event13Start,
 				end: event13End,
-				classNames: [ 'fc-event-nc-tentative', 'fc-event-nc-alarms', 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-starts-20' ],
+				classNames: [ 'fc-event-nc-tentative', 'fc-event-nc-alarms', 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-flow-32', 'fc-event-nc-starts-20' ],
 				extendedProps: {
 					objectId: '1',
 					recurrenceId: 789,
@@ -328,19 +328,19 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 		}
 		])
 
-		expect(eventComponentSet1[0].startDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet1[0].startDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet1[0].startDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
-		expect(eventComponentSet1[0].endDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet1[0].endDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet1[0].endDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
 
-		expect(eventComponentSet1[1].startDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet1[1].startDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet1[1].startDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
-		expect(eventComponentSet1[1].endDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet1[1].endDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet1[1].endDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
 
-		expect(eventComponentSet1[2].startDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet1[2].startDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet1[2].startDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
-		expect(eventComponentSet1[2].endDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet1[2].endDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet1[2].endDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
 
 		expect(eventComponentSet2[0].startDate.getInTimezone).toHaveBeenCalledTimes(1)
@@ -348,9 +348,9 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 		expect(eventComponentSet2[0].endDate.getInTimezone).toHaveBeenCalledTimes(1)
 		expect(eventComponentSet2[0].endDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
 
-		expect(eventComponentSet4[0].startDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet4[0].startDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet4[0].startDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
-		expect(eventComponentSet4[0].endDate.getInTimezone).toHaveBeenCalledTimes(1)
+		expect(eventComponentSet4[0].endDate.getInTimezone).toHaveBeenCalledTimes(2)
 		expect(eventComponentSet4[0].endDate.getInTimezone).toHaveBeenNthCalledWith(1, timezone)
 
 		expect(translate).toHaveBeenCalledTimes(4)
@@ -1026,7 +1026,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 		expect(result[0].classNames).toEqual([ 'fc-event-nc-all-declined', 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
 		expect(result[1].classNames).toEqual([ 'fc-event-nc-tentative', 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
 		// Past events keep their participation classes
-		expect(result[2].classNames).toEqual([ 'fc-event-nc-all-declined', 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
+		expect(result[2].classNames).toEqual([ 'fc-event-nc-all-declined', 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-flow-32', 'fc-event-nc-starts-36' ])
 		// Accepted invitations render like confirmed events and need no own class
 		expect(result[3].classNames).toEqual([ 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
 		expect(result[4].classNames).toEqual([ 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6' ])
@@ -1103,6 +1103,57 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 			id: 'Calendar id',
 		}, new Date(Date.UTC(2027, 6, 1)), new Date(Date.UTC(2027, 7, 1)), { calendarJsTimezone: true, tzid: 'UTC' }, 'dayGridMonth')
 		expect(unsplit).toHaveLength(1)
+	})
+
+	it('should apply the transparency display override of read-only calendars', () => {
+		translate.mockImplementation((app, str) => str)
+		getHexForColorName.mockImplementation(() => null)
+
+		const start = new Date(2027, 6, 1, 10, 0, 0, 0)
+		const end = new Date(2027, 6, 1, 11, 0, 0, 0)
+		const makeEvent = (transp) => ({
+			name: 'VEVENT',
+			id: 'sub-event',
+			title: 'Feed event',
+			isAllDay: vi.fn().mockReturnValue(false),
+			getReferenceRecurrenceId: vi.fn().mockReturnValue({ unixTime: 123 }),
+			canModifyAllDay: vi.fn().mockReturnValue(false),
+			startDate: { getInTimezone: vi.fn().mockReturnValue({ jsDate: new Date(start) }) },
+			endDate: { getInTimezone: vi.fn().mockReturnValue({ jsDate: new Date(end) }) },
+			getFirstPropertyFirstValue: vi.fn().mockImplementation((name) => (name === 'TRANSP' ? transp : null)),
+			getFirstProperty: vi.fn().mockReturnValue(null),
+			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
+			getPropertyIterator: vi.fn().mockReturnValue([]),
+			status: null,
+			percent: null,
+			color: null,
+		})
+		const runWith = (event, calendarId) => {
+			getAllObjectsInTimeRange.mockReturnValueOnce([event])
+			return eventSourceFunction([{
+				calendarObject: true,
+				dav: { url: 'url1' },
+				id: '1',
+			}], {
+				order: 0,
+				displayName: 'Subscription',
+				id: calendarId,
+			}, new Date(2027, 6, 1), new Date(2027, 7, 1), { calendarJsTimezone: true, tzid: 'UTC' })
+		}
+
+		const settingsStore = useSettingsStore()
+		settingsStore.subscriptionTransparencyOverrides = { 'subscription-1': 'transparent', 'subscription-2': 'opaque' }
+
+		// Override wins over the busy status delivered by the source
+		const forcedFree = runWith(makeEvent(null), 'subscription-1')
+		expect(forcedFree[0].classNames).toContain('fc-event-nc-free')
+		const forcedBusy = runWith(makeEvent('TRANSPARENT'), 'subscription-2')
+		expect(forcedBusy[0].classNames).not.toContain('fc-event-nc-free')
+
+		// Without an override the delivered TRANSP decides
+		const delivered = runWith(makeEvent('TRANSPARENT'), 'subscription-3')
+		expect(delivered[0].classNames).toContain('fc-event-nc-free')
 	})
 
 })

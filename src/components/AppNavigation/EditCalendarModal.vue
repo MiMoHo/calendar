@@ -43,6 +43,23 @@
 					{{ $t('calendar', 'Never show me as busy (set this calendar to transparent)') }}
 				</NcCheckboxRadioSwitch>
 			</template>
+			<template v-if="calendar.readOnly">
+				<div class="edit-calendar-modal__events-show-as">
+					<label for="events-show-as-select" class="edit-calendar-modal__events-show-as__label">
+						{{ $t('calendar', 'Show events as') }}
+					</label>
+					<NcSelect
+						v-model="selectedEventsShowAs"
+						inputId="events-show-as-select"
+						:options="eventsShowAsOptions"
+						:clearable="false"
+						class="edit-calendar-modal__events-show-as__select"
+						@update:modelValue="eventsShowAsChanged = true" />
+					<p class="edit-calendar-modal__events-show-as__hint">
+						{{ $t('calendar', 'The events of this calendar cannot be edited themselves; this setting overrides the busy status they were delivered with') }}
+					</p>
+				</div>
+			</template>
 			<template v-if="!calendar.isSharedWithMe && isAfterVersion">
 				<div class="edit-calendar-modal__default-alarm">
 					<label for="default-alarm-partday-select" class="edit-calendar-modal__default-alarm__label">
@@ -185,11 +202,13 @@ export default {
 			defaultAlarmChanged: false,
 			showAlignEventsDialog: false,
 			alignEventsTransparency: null,
+			selectedEventsShowAs: null,
+			eventsShowAsChanged: false,
 		}
 	},
 
 	computed: {
-		...mapStores(useCalendarsStore),
+		...mapStores(useCalendarsStore, useSettingsStore),
 		calendar() {
 			const id = this.calendarsStore.editCalendarModal?.calendarId
 			if (!id) {
@@ -342,6 +361,20 @@ export default {
 		},
 
 		/**
+		 * Options for the busy-status display override of read-only
+		 * calendars (e.g. webcal subscriptions).
+		 *
+		 * @return {object[]}
+		 */
+		eventsShowAsOptions() {
+			return [
+				{ label: this.$t('calendar', 'As delivered by the source'), value: '' },
+				{ label: this.$t('calendar', 'Busy'), value: 'opaque' },
+				{ label: this.$t('calendar', 'Free'), value: 'transparent' },
+			]
+		},
+
+		/**
 		 * Question of the dialog offering to align the existing events
 		 * with the changed calendar transparency.
 		 *
@@ -388,6 +421,11 @@ export default {
 			this.calendarNameChanged = false
 			this.calendarColorChanged = false
 			this.isTransparent = calendar.transparency === 'transparent'
+
+			const override = this.settingsStore.subscriptionTransparencyOverrides[calendar.id] ?? ''
+			this.selectedEventsShowAs = this.eventsShowAsOptions.find((option) => option.value === override)
+				?? this.eventsShowAsOptions[0]
+			this.eventsShowAsChanged = false
 
 			// Initialize default alarm for part-day events
 			if (calendar.defaultAlarmPartDay === null) {
@@ -512,6 +550,12 @@ export default {
 				}
 				if (this.isAfterVersion && this.defaultAlarmChanged) {
 					await this.saveDefaultAlarm()
+				}
+				if (this.calendar.readOnly && this.eventsShowAsChanged) {
+					await this.settingsStore.setSubscriptionTransparencyOverride({
+						calendarId: this.calendar.id,
+						transparency: this.selectedEventsShowAs?.value ?? '',
+					})
 				}
 			} catch (error) {
 				showError(this.$t('calendar', 'Failed to save calendar name and color'))
@@ -667,6 +711,25 @@ export default {
 		display: flex;
 		flex-direction: column;
 		gap: 5px;
+	}
+
+	&__events-show-as {
+		margin-bottom: calc(var(--default-grid-baseline) * 2);
+
+		&__label {
+			display: block;
+			margin-bottom: var(--default-grid-baseline);
+			font-weight: bold;
+		}
+
+		&__select {
+			width: 100%;
+		}
+
+		&__hint {
+			margin-top: var(--default-grid-baseline);
+			color: var(--color-text-maxcontrast);
+		}
 	}
 
 	&__default-alarm {

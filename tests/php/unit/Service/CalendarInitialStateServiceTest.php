@@ -129,7 +129,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['spreed', 'start_conversations', '[]', '[]'],
 				['spreed', 'allowed_groups', '[]', '[]'],
 			]);
-		$this->config->expects(self::exactly(14))
+		$this->config->expects(self::exactly(15))
 			->method('getUserValue')
 			->willReturnMap([
 				['user123', 'calendar', 'eventLimit', 'defaultEventLimit', 'yes'],
@@ -146,6 +146,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['user123', 'calendar', 'defaultReminderFullDay', '00:10:00', '32400'],
 				['user123', 'calendar', 'showTasks', 'defaultShowTasks', '00:15:00'],
 				['user123', 'calendar', 'tasksSidebar', 'defaultTasksSidebar', 'yes'],
+				['user123', 'calendar', 'subscriptionTransparencyOverrides', '{}', '{"sub-1":"opaque"}'],
 			]);
 		$this->appConfig->expects(self::exactly(2))
 			->method('getValueBool')
@@ -175,7 +176,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 			->willReturn([$this->createMock(IResourceBackend::class)]);
 		$this->roomManager->expects(self::never())
 			->method('getBackends');
-		$this->initialStateService->expects(self::exactly(29))
+		$this->initialStateService->expects(self::exactly(30))
 			->method('provideInitialState')
 			->willReturnMap([
 				['app_version', '1.0.0'],
@@ -201,6 +202,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['appointmentConfigs', [new AppointmentConfig()]],
 				['disable_appointments', false],
 				['can_subscribe_link', false],
+				['subscription_transparency_overrides', ['sub-1' => 'opaque']],
 				['show_resources', true],
 				['isCirclesEnabled', false],
 				['publicCalendars', null],
@@ -257,7 +259,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['dav', 'enableCalendarFederation', true, false, false],
 				['files_sharing', 'outgoing_server2server_share_enabled', true, false, false],
 			]);
-		$this->config->expects(self::exactly(14))
+		$this->config->expects(self::exactly(15))
 			->method('getUserValue')
 			->willReturnMap([
 				[null, 'calendar', 'eventLimit', 'defaultEventLimit', 'yes'],
@@ -274,6 +276,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				[null, 'calendar', 'defaultReminderFullDay', '00:10:00', '32400'],
 				[null, 'calendar', 'showTasks', 'defaultShowTasks', '00:15:00'],
 				[null, 'calendar', 'tasksSidebar', 'defaultTasksSidebar', 'yes'],
+				[null, 'calendar', 'subscriptionTransparencyOverrides', '{}', '{}'],
 			]);
 		$this->appManager->expects(self::exactly(2))
 			->method('isEnabledForUser')
@@ -293,7 +296,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 		$this->roomManager->expects(self::once())
 			->method('getBackends')
 			->willReturn([]);
-		$this->initialStateService->expects(self::exactly(28))
+		$this->initialStateService->expects(self::exactly(29))
 			->method('provideInitialState')
 			->willReturnMap([
 				['app_version', '1.0.0'],
@@ -318,6 +321,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['force_event_alarm_type', null],
 				['disable_appointments', false],
 				['can_subscribe_link', false],
+				['subscription_transparency_overrides', []],
 				['show_resources', true],
 				['isCirclesEnabled', false],
 				['publicCalendars', null],
@@ -376,7 +380,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['spreed', 'start_conversations', '[]', '[]'],
 				['spreed', 'allowed_groups', '[]', '[]'],
 			]);
-		$this->config->expects(self::exactly(14))
+		$this->config->expects(self::exactly(15))
 			->method('getUserValue')
 			->willReturnMap([
 				['user123', 'calendar', 'eventLimit', 'defaultEventLimit', 'yes'],
@@ -393,6 +397,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['user123', 'calendar', 'defaultReminderFullDay', '00:10:00', '32400'],
 				['user123', 'calendar', 'showTasks', 'defaultShowTasks', '00:15:00'],
 				['user123', 'calendar', 'tasksSidebar', 'defaultTasksSidebar', 'yes'],
+				['user123', 'calendar', 'subscriptionTransparencyOverrides', '{}', '{"sub-1":"opaque"}'],
 			]);
 		$this->appConfig->expects(self::exactly(2))
 			->method('getValueBool')
@@ -423,7 +428,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 		$this->roomManager->expects(self::once())
 			->method('getBackends')
 			->willReturn([$this->createMock(IRoomBackend::class)]);
-		$this->initialStateService->expects(self::exactly(29))
+		$this->initialStateService->expects(self::exactly(30))
 			->method('provideInitialState')
 			->willReturnMap([
 				['app_version', '1.0.0'],
@@ -449,6 +454,7 @@ class CalendarInitialStateServiceTest extends TestCase {
 				['appointmentConfigs', [new AppointmentConfig()]],
 				['disable_appointments', false],
 				['can_subscribe_link', false],
+				['subscription_transparency_overrides', ['sub-1' => 'opaque']],
 				['show_resources', true],
 				['isCirclesEnabled', false],
 				['publicCalendars', null],

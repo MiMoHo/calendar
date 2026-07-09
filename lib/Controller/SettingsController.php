@@ -83,9 +83,61 @@ class SettingsController extends Controller {
 				return $this->setTasksSidebar($value);
 			case 'attachmentsFolder':
 				return $this->setAttachmentsFolder($value);
+			case 'subscriptionTransparencyOverride':
+				return $this->setSubscriptionTransparencyOverride($value);
 			default:
 				return new JSONResponse([], Http::STATUS_BAD_REQUEST);
 		}
+	}
+
+	/**
+	 * Override how the events of a read-only calendar (e.g. a webcal
+	 * subscription) show up: as busy, as free, or as delivered by the
+	 * source. The overrides of all calendars are kept in one JSON map,
+	 * keyed by calendar id; an empty transparency removes the override.
+	 *
+	 * @param string $value JSON object with 'calendarId' and 'transparency' ('opaque', 'transparent' or '')
+	 * @return JSONResponse
+	 */
+	private function setSubscriptionTransparencyOverride(string $value):JSONResponse {
+		$data = json_decode($value, true);
+		if (!\is_array($data)
+			|| !isset($data['calendarId'], $data['transparency'])
+			|| !\is_string($data['calendarId'])
+			|| $data['calendarId'] === ''
+			|| \strlen($data['calendarId']) > 255
+			|| !\in_array($data['transparency'], ['opaque', 'transparent', ''], true)) {
+			return new JSONResponse([], Http::STATUS_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$overrides = json_decode($this->config->getUserValue(
+				$this->userId,
+				$this->appName,
+				'subscriptionTransparencyOverrides',
+				'{}'
+			), true);
+			if (!\is_array($overrides)) {
+				$overrides = [];
+			}
+
+			if ($data['transparency'] === '') {
+				unset($overrides[$data['calendarId']]);
+			} else {
+				$overrides[$data['calendarId']] = $data['transparency'];
+			}
+
+			$this->config->setUserValue(
+				$this->userId,
+				$this->appName,
+				'subscriptionTransparencyOverrides',
+				json_encode($overrides, JSON_THROW_ON_ERROR)
+			);
+		} catch (\Exception $e) {
+			return new JSONResponse([], Http::STATUS_INTERNAL_SERVER_ERROR);
+		}
+
+		return new JSONResponse();
 	}
 
 	/**

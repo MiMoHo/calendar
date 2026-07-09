@@ -74,6 +74,10 @@ class CalendarInitialStateService {
 			$forceEventAlarmType = false;
 		}
 		$canSubscribeLink = $this->config->getAppValue('dav', 'allow_calendar_link_subscriptions', 'yes') === 'yes';
+		$subscriptionTransparencyOverrides = json_decode($this->config->getUserValue($this->userId, $this->appName, 'subscriptionTransparencyOverrides', '{}'), true);
+		if (!is_array($subscriptionTransparencyOverrides)) {
+			$subscriptionTransparencyOverrides = [];
+		}
 		$showResources = $this->config->getAppValue($this->appName, 'showResources', 'yes') === 'yes';
 		$publicCalendars = $this->config->getAppValue($this->appName, 'publicCalendars', '');
 
@@ -124,6 +128,7 @@ class CalendarInitialStateService {
 		}
 		$this->initialStateService->provideInitialState('disable_appointments', $disableAppointments);
 		$this->initialStateService->provideInitialState('can_subscribe_link', $canSubscribeLink);
+		$this->initialStateService->provideInitialState('subscription_transparency_overrides', $subscriptionTransparencyOverrides);
 		$this->initialStateService->provideInitialState('show_resources', $showResources);
 		$this->initialStateService->provideInitialState('isCirclesEnabled', $isCirclesEnabled && $isCircleVersionCompatible);
 		$this->initialStateService->provideInitialState('publicCalendars', $publicCalendars);

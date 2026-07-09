@@ -345,6 +345,7 @@ export default {
 			showResources: loadState('calendar', 'show_resources', true),
 			publicCalendars: loadState('calendar', 'publicCalendars', []),
 			tasksSidebar: loadState('calendar', 'tasks_sidebar', true),
+			subscriptionTransparencyOverrides: loadState('calendar', 'subscription_transparency_overrides', {}),
 		})
 		this.settingsStore.initializeCalendarJsConfig()
 
