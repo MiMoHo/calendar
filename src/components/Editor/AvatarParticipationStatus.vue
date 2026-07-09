@@ -156,9 +156,10 @@ export default {
 					}
 
 					if (this.attendeeIsOrganizer) {
+						// The organizer was never invited; saying so confuses
 						return {
 							...acceptedIcon,
-							text: t('calendar', 'Invitation accepted'),
+							text: t('calendar', 'Organizer of the event'),
 						}
 					}
 

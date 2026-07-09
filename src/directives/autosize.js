@@ -16,13 +16,12 @@ if (window.ResizeObserver) {
 }
 
 /**
- * Adds autosize to textarea on bind
+ * Adds autosize to a textarea when it is mounted
  *
  * @param {Element} el The DOM element
  * @param {object} binding The binding's object
- * @param {VNode} vnode Virtual node
  */
-function bind(el, binding, vnode) {
+function mounted(el, binding) {
 	// Check that the binding is true
 	if (binding.value !== true) {
 		return
@@ -33,7 +32,7 @@ function bind(el, binding, vnode) {
 		return
 	}
 
-	vnode.context.$nextTick(() => {
+	requestAnimationFrame(() => {
 		autosize(el)
 	})
 
@@ -47,14 +46,13 @@ function bind(el, binding, vnode) {
  *
  * @param {Element} el The DOM element
  * @param {object} binding The binding's object
- * @param {VNode} vnode Virtual node
  */
-function update(el, binding, vnode) {
+function updated(el, binding) {
 	if (binding.value === true && binding.oldValue === false) {
-		bind(el, binding, vnode)
+		mounted(el, binding)
 	}
 	if (binding.value === false && binding.oldValue === true) {
-		unbind(el)
+		unmounted(el)
 	}
 	if (binding.value === true && binding.oldValue === true) {
 		autosize.update(el)
@@ -62,19 +60,21 @@ function update(el, binding, vnode) {
 }
 
 /**
- * Removes autosize when textarea is removed
+ * Removes autosize when the textarea is removed
  *
  * @param {Element} el The DOM element
  */
-function unbind(el) {
+function unmounted(el) {
 	autosize.destroy(el)
 	if (resizeObserver) {
 		resizeObserver.unobserve(el)
 	}
 }
 
+// Vue 3 directive hooks; the previous Vue 2 names (bind/update/unbind)
+// were never invoked, so textareas silently lost their autosizing
 export default {
-	bind,
-	update,
-	unbind,
+	mounted,
+	updated,
+	unmounted,
 }

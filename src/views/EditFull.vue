@@ -465,18 +465,6 @@ export default {
 			showCancelDialog: false,
 			showFullModal: true,
 
-			propInvitationForwarding: {
-				readableName: t('calendar', 'Allow forwarding'),
-				icon: 'AccountPlusOutline',
-				options: [
-					{ value: 'TRUE', label: t('calendar', 'Anyone with the invitation can respond') },
-					{ value: 'FALSE', label: t('calendar', 'Only invited attendees can respond') },
-				],
-
-				multiple: false,
-				info: t('calendar', 'Choose "Only invited attendees can respond" to prevent attendees from forwarding the invitation to others.'),
-				defaultValue: 'TRUE',
-			},
 		}
 	},
 
@@ -490,25 +478,6 @@ export default {
 		}),
 
 		...mapState(useCalendarObjectInstanceStore, ['calendarObjectInstance']),
-		accessClass() {
-			return this.calendarObjectInstance?.accessClass || null
-		},
-
-		categories() {
-			return this.calendarObjectInstance?.categories || null
-		},
-
-		status() {
-			return this.calendarObjectInstance?.status || null
-		},
-
-		timeTransparency() {
-			return this.calendarObjectInstance?.timeTransparency || null
-		},
-
-		invitationForwarding() {
-			return this.calendarObjectInstance?.invitationForwarding ?? null
-		},
 
 		subTitle() {
 			if (!this.calendarObjectInstance) {
@@ -541,9 +510,6 @@ export default {
 			})
 		},
 
-		showInvitationForwarding() {
-			return isAfterVersion(34)
-		},
 	},
 
 	mounted() {
@@ -585,90 +551,6 @@ export default {
 			this.updateStartTime(dates.start)
 			this.updateEndDate(dates.end)
 			this.updateEndTime(dates.end)
-		},
-
-		/**
-		 * Updates the access-class of this event
-		 *
-		 * @param {string} accessClass The new access class
-		 */
-		updateAccessClass(accessClass) {
-			this.calendarObjectInstanceStore.changeAccessClass({
-				calendarObjectInstance: this.calendarObjectInstance,
-				accessClass,
-			})
-		},
-
-		/**
-		 * Updates the status of the event
-		 *
-		 * @param {string} status The new status
-		 */
-		updateStatus(status) {
-			this.calendarObjectInstanceStore.changeStatus({
-				calendarObjectInstance: this.calendarObjectInstance,
-				status,
-			})
-		},
-
-		/**
-		 * Updates the time-transparency of the event
-		 *
-		 * @param {string} timeTransparency The new time-transparency
-		 */
-		updateTimeTransparency(timeTransparency) {
-			this.calendarObjectInstanceStore.changeTimeTransparency({
-				calendarObjectInstance: this.calendarObjectInstance,
-				timeTransparency,
-			})
-		},
-
-		/**
-		 * Allow or disallow forwarding of this invitation
-		 *
-		 * @param {string} invitationForwarding Invitation forwarding value
-		 */
-		updateInvitationForwarding(invitationForwarding) {
-			this.calendarObjectInstanceStore.changeInvitationForwarding({
-				calendarObjectInstance: this.calendarObjectInstance,
-				invitationForwarding,
-			})
-		},
-
-		/**
-		 * Adds a category to the event
-		 *
-		 * @param {string} category Category to add
-		 */
-		addCategory(category) {
-			this.calendarObjectInstanceStore.addCategory({
-				calendarObjectInstance: this.calendarObjectInstance,
-				category,
-			})
-		},
-
-		/**
-		 * Removes a category from the event
-		 *
-		 * @param {string} category Category to remove
-		 */
-		removeCategory(category) {
-			this.calendarObjectInstanceStore.removeCategory({
-				calendarObjectInstance: this.calendarObjectInstance,
-				category,
-			})
-		},
-
-		/**
-		 * Updates the color of the event
-		 *
-		 * @param {string} customColor The new color
-		 */
-		updateColor(customColor) {
-			this.calendarObjectInstanceStore.changeCustomColor({
-				calendarObjectInstance: this.calendarObjectInstance,
-				customColor,
-			})
 		},
 
 		/**

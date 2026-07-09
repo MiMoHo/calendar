@@ -19,9 +19,8 @@
 				:class="{ 'property-title-time-picker__time-pickers--all-day': isAllDay }"
 				class="property-title-time-picker__time-pickers__inner">
 				<div class="property-title-time-picker__time-pickers-from">
-					<!-- TRANSLATORS Start of an event -->
-					<div class="datepicker-label">
-						{{ $t('calendar', 'From') }}
+					<div class="datepicker-label" :title="$t('calendar', 'From')" :aria-label="$t('calendar', 'From')">
+						<IconRayStart :size="20" />
 					</div>
 					<div class="property-title-time-picker__time-pickers-from-inner">
 						<div class="property-title-time-picker__time-pickers-from-inner__selectors">
@@ -56,9 +55,8 @@
 				</div>
 
 				<div class="property-title-time-picker__time-pickers-to">
-					<!-- TRANSLATORS End of an event -->
-					<div class="datepicker-label">
-						{{ $t('calendar', 'To') }}
+					<div class="datepicker-label" :title="$t('calendar', 'To')" :aria-label="$t('calendar', 'To')">
+						<IconRayEnd :size="20" />
 					</div>
 					<div class="property-title-time-picker__time-pickers-to-inner">
 						<div class="property-title-time-picker__time-pickers-from-inner__selectors">
@@ -79,15 +77,20 @@
 						</div>
 					</div>
 				</div>
-				<NcButton
-					v-if="!showTimezoneSelect && (!isAllDay || isMobile)"
-					variant="tertiary"
-					@click="showTimezoneSelect = !showTimezoneSelect">
-					<template #icon>
-						<IconTimezone :size="20" />
-					</template>
-					{{ startTimezone }}
-				</NcButton>
+				<div class="property-title-time-picker__footer-row">
+					<NcButton
+						v-if="!showTimezoneSelect && (!isAllDay || isMobile)"
+						variant="tertiary"
+						@click="showTimezoneSelect = !showTimezoneSelect">
+						<template #icon>
+							<IconTimezone :size="20" />
+						</template>
+						{{ startTimezone }}
+					</NcButton>
+					<!-- Room for controls sharing the timezone row, like the
+						all-day toggle of the simple editor -->
+					<slot name="afterTimezone" />
+				</div>
 			</div>
 		</div>
 		<div
@@ -141,6 +144,8 @@ import moment from '@nextcloud/moment'
 import { NcButton, NcTimezonePicker } from '@nextcloud/vue'
 import { mapState } from 'pinia'
 import CalendarIcon from 'vue-material-design-icons/CalendarOutline.vue'
+import IconRayEnd from 'vue-material-design-icons/RayEnd.vue'
+import IconRayStart from 'vue-material-design-icons/RayStart.vue'
 import IconTimezone from 'vue-material-design-icons/Web.vue'
 import DatePicker from '../../Shared/DatePicker.vue'
 import getTimezoneManager from '../../../services/timezoneDataProviderService.js'
@@ -150,6 +155,8 @@ import { getDateFromDateTimeValue } from '@/utils/date'
 export default {
 	name: 'PropertyTitleTimePicker',
 	components: {
+		IconRayEnd,
+		IconRayStart,
 		DatePicker,
 		IconTimezone,
 		CalendarIcon,
@@ -453,6 +460,21 @@ export default {
 	flex-wrap: nowrap !important;
 }
 
+.property-title-time-picker__footer-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: calc(var(--default-grid-baseline) * 2);
+
+	// The icon centers of this row already sit under the ones inside the
+	// date/time inputs; the tertiary button's icon container is 4px wider
+	// than the input's text inset, so the label is pulled onto the text
+	// line of the input above
+	:deep(.button-vue__icon) {
+		margin-inline-end: -4px;
+	}
+}
+
 .property-title-time-picker__time-pickers__inner {
 	display: flex;
 	gap: var(--default-grid-baseline);
@@ -612,8 +634,10 @@ export default {
 			padding-top: calc(var(--default-grid-baseline) / 2);
 		}
 
+		// Overrides the editing-mode margin above: the date labels share
+		// the exact text line of the notes and alarm rows
 		.property-title-time-picker__time-pickers {
-			margin-inline-start: calc(var(--default-grid-baseline) * 0.5)
+			margin-inline-start: 0;
 		}
 	}
 

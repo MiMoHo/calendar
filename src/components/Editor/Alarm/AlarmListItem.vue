@@ -14,10 +14,13 @@
 		<div
 			v-if="isEditing && isRelativeAlarm && !isAllDay"
 			class="property-alarm-item__edit property-alarm-item__edit--timed">
+			<!-- The unit select next to it says what the number means; a
+				visible label would just repeat that (see the recurrence
+				modal's count field) -->
 			<NcTextField
 				type="number"
-				:label="$t('calendar', 'Amount')"
 				:labelOutside="true"
+				:aria-label="$t('calendar', 'Amount')"
 				:modelValue="String(alarm.relativeAmountTimed)"
 				@update:modelValue="changeRelativeAmountTimed" />
 			<AlarmTimeUnitSelect
@@ -33,8 +36,8 @@
 			<div class="property-alarm-item__edit--all-day__distance">
 				<NcTextField
 					type="number"
-					:label="$t('calendar', 'Amount')"
-					:labelOutside="false"
+					:labelOutside="true"
+					:aria-label="$t('calendar', 'Amount')"
 					:modelValue="String(alarm.relativeAmountAllDay)"
 					@update:modelValue="changeRelativeAmountAllDay" />
 				<AlarmTimeUnitSelect

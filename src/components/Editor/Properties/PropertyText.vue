@@ -34,7 +34,7 @@
 			<!-- eslint-disable-next-line vue/singleline-html-element-content-newline -->
 			<div
 				v-else
-				v-linkify="{ text: value, linkify: true }"
+				v-linkify="{ text: displayValue, linkify: true }"
 				class="property-text__readonly-value"
 				:class="{ 'linkify-links': linkifyLinks && !isReadOnly }"
 				:style="{ 'min-height': linkifyMinHeight }"
@@ -71,6 +71,16 @@ export default {
 	},
 
 	computed: {
+		/**
+		 * The read-only rendering collapses non-breaking spaces: they do
+		 * not vanish at wrap points and would indent the wrapped lines
+		 *
+		 * @return {string}
+		 */
+		displayValue() {
+			return typeof this.value === 'string' ? this.value.replace(/\u00a0/g, ' ') : this.value
+		},
+
 		display() {
 			if (this.isReadOnly) {
 				if (typeof this.value !== 'string') {
@@ -85,8 +95,8 @@ export default {
 		},
 
 		/**
-		 * Returns the default number of rows for a textarea.
-		 * This is used to give the description field an automatic size 2 rows
+		 * Returns the default number of rows for a textarea, taken from the
+		 * property model; the textarea keeps growing with its content.
 		 *
 		 * @return {number}
 		 */
@@ -122,7 +132,9 @@ export default {
 }
 
 .edit-simple .property-text__input {
-	padding-inline-start: calc(var(--default-grid-baseline) * 12);
+	// Same content column as the date pickers of the simple editor: the
+	// fields sit as close to their icons as the icons sit to the edge
+	padding-inline-start: calc(var(--default-grid-baseline) * 9);
 }
 
 .property-text--readonly .property-text__input {
@@ -132,11 +144,19 @@ export default {
 .property-text__readonly-value {
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
-}
+	// Mirrors the textarea's box (border + padding), so toggling between
+	// the clickable-links view and the editable textarea does not jump;
+	// the border color matches the textarea's, so the field keeps its
+	// visible frame while the links are clickable
+	border: 2px solid var(--color-border-maxcontrast);
+	padding: 5px 12px;
+	margin-bottom: -8px;
 
-.textarea--description {
-	height: 120px;
-	overflow-y: auto;
+	// The server styles external links with 3px side margins; a wrapped
+	// line starting with a link would be indented by them
+	:deep(a) {
+		margin-inline: 0;
+	}
 }
 
 textarea {

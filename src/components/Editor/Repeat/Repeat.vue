@@ -522,4 +522,10 @@ export default {
 	display: flex;
 	justify-content: flex-end;
 }
+
+// Align the popup fields like the editor rows: one shared left edge and
+// full-width selects
+.property-repeat__options :deep(.repeat-option-set) {
+	margin-inline: 0;
+}
 </style>

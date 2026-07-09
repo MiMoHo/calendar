@@ -20,6 +20,7 @@ import { removeMailtoPrefix } from '../utils/attendee.js'
 import { uidToHexColor } from '../utils/color.js'
 import { dateFactory } from '../utils/date.js'
 import logger from '../utils/logger.js'
+import { isAfterVersion } from '../utils/nextcloudVersion.ts'
 import { getPrefixedRoute } from '../utils/router.js'
 
 /**
@@ -349,6 +350,69 @@ export default {
 			return getRFCProperties()
 		},
 		/**
+		 * Returns the access-class of this event
+		 *
+		 * @return {string|null}
+		 */
+		accessClass() {
+			return this.calendarObjectInstance?.accessClass || null
+		},
+		/**
+		 * Returns the categories of this event
+		 *
+		 * @return {string[]|null}
+		 */
+		categories() {
+			return this.calendarObjectInstance?.categories || null
+		},
+		/**
+		 * Returns the status of this event
+		 *
+		 * @return {string|null}
+		 */
+		status() {
+			return this.calendarObjectInstance?.status || null
+		},
+		/**
+		 * Returns the time-transparency of this event
+		 *
+		 * @return {string|null}
+		 */
+		timeTransparency() {
+			return this.calendarObjectInstance?.timeTransparency || null
+		},
+		/**
+		 * Returns the invitation-forwarding value of this event
+		 *
+		 * @return {string|null}
+		 */
+		invitationForwarding() {
+			return this.calendarObjectInstance?.invitationForwarding ?? null
+		},
+		/**
+		 * Whether the invitation-forwarding option is supported (Nextcloud 34+)
+		 *
+		 * @return {boolean}
+		 */
+		showInvitationForwarding() {
+			return isAfterVersion(34)
+		},
+		/**
+		 * Property model of the invitation-forwarding option
+		 *
+		 * @return {object}
+		 */
+		propInvitationForwarding() {
+			return {
+				readableName: t('calendar', 'Allow forwarding'),
+				icon: 'AccountPlusOutline',
+				options: [
+					{ value: 'TRUE', label: t('calendar', 'Anyone with the invitation can respond') },
+					{ value: 'FALSE', label: t('calendar', 'Only invited attendees can respond') },
+				],
+			}
+		},
+		/**
 		 * Returns whether or not this event can be downloaded from the server
 		 *
 		 * @return {boolean}
@@ -530,6 +594,89 @@ export default {
 	},
 
 	methods: {
+		/**
+		 * Updates the access-class of this event
+		 *
+		 * @param {string} accessClass The new access class
+		 */
+		updateAccessClass(accessClass) {
+			this.calendarObjectInstanceStore.changeAccessClass({
+				calendarObjectInstance: this.calendarObjectInstance,
+				accessClass,
+			})
+		},
+
+		/**
+		 * Updates the status of the event
+		 *
+		 * @param {string} status The new status
+		 */
+		updateStatus(status) {
+			this.calendarObjectInstanceStore.changeStatus({
+				calendarObjectInstance: this.calendarObjectInstance,
+				status,
+			})
+		},
+
+		/**
+		 * Updates the time-transparency of the event
+		 *
+		 * @param {string} timeTransparency The new time-transparency
+		 */
+		updateTimeTransparency(timeTransparency) {
+			this.calendarObjectInstanceStore.changeTimeTransparency({
+				calendarObjectInstance: this.calendarObjectInstance,
+				timeTransparency,
+			})
+		},
+
+		/**
+		 * Allow or disallow forwarding of this invitation
+		 *
+		 * @param {string} invitationForwarding Invitation forwarding value
+		 */
+		updateInvitationForwarding(invitationForwarding) {
+			this.calendarObjectInstanceStore.changeInvitationForwarding({
+				calendarObjectInstance: this.calendarObjectInstance,
+				invitationForwarding,
+			})
+		},
+
+		/**
+		 * Adds a category to the event
+		 *
+		 * @param {string} category Category to add
+		 */
+		addCategory(category) {
+			this.calendarObjectInstanceStore.addCategory({
+				calendarObjectInstance: this.calendarObjectInstance,
+				category,
+			})
+		},
+
+		/**
+		 * Removes a category from the event
+		 *
+		 * @param {string} category Category to remove
+		 */
+		removeCategory(category) {
+			this.calendarObjectInstanceStore.removeCategory({
+				calendarObjectInstance: this.calendarObjectInstance,
+				category,
+			})
+		},
+
+		/**
+		 * Updates the color of the event
+		 *
+		 * @param {string} customColor The new color
+		 */
+		updateColor(customColor) {
+			this.calendarObjectInstanceStore.changeCustomColor({
+				calendarObjectInstance: this.calendarObjectInstance,
+				customColor,
+			})
+		},
 		/**
 		 * Opens the Talk modal for selecting or creating a Talk room
 		 */

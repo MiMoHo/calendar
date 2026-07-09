@@ -67,6 +67,18 @@
 								</p>
 							</template>
 						</NcPopover>
+						<NcColorPicker
+							v-if="!isReadOnlyOrViewing"
+							:modelValue="color || selectedCalendarColor"
+							:advancedFields="true"
+							@update:modelValue="updateColor">
+							<button
+								class="event-popover__color-dot"
+								type="button"
+								:aria-label="t('calendar', 'Event color')"
+								:title="t('calendar', 'Event color')"
+								:style="{ 'background-color': color || selectedCalendarColor }" />
+						</NcColorPicker>
 						<Actions v-if="!isLoading && !isError && !isNew" :forceMenu="true">
 							<ActionButton v-if="eventLink" @click="copyEventLink()">
 								<template #icon>
@@ -139,7 +151,7 @@
 					</div>
 
 					<!-- Content -->
-					<div class="event-popover__content">
+					<div class="event-popover__content" :class="{ 'event-popover__content--viewing': isReadOnlyOrViewing }">
 						<PropertyTitleTimePicker
 							:startDate="startDate"
 							:startTimezone="startTimezone"
@@ -156,25 +168,79 @@
 							@updateEndDate="updateEndDate"
 							@updateEndTime="updateEndTime"
 							@updateEndTimezone="updateEndTimezone"
-							@toggleAllDay="toggleAllDay" />
+							@toggleAllDay="toggleAllDay">
+							<template v-if="!isReadOnlyOrViewing" #afterTimezone>
+								<div class="event-popover__all-day" :class="{ 'event-popover__all-day--all-day': isAllDay }">
+									<NcCheckboxRadioSwitch
+										:modelValue="isAllDay"
+										:disabled="isViewedByOrganizer === false || isReadOnlyOrViewing || !canModifyAllDay"
+										@update:modelValue="toggleAllDayPreliminary">
+										{{ $t('calendar', 'All day') }}
+									</NcCheckboxRadioSwitch>
+								</div>
+							</template>
+						</PropertyTitleTimePicker>
 
-						<div v-if="!isReadOnlyOrViewing" class="event-popover__all-day">
-							<NcCheckboxRadioSwitch
-								:modelValue="isAllDay"
-								:disabled="isViewedByOrganizer === false || isReadOnlyOrViewing || !canModifyAllDay"
-								@update:modelValue="toggleAllDayPreliminary">
-								{{ $t('calendar', 'All day') }}
-							</NcCheckboxRadioSwitch>
+						<Repeat
+							v-if="!isReadOnlyOrViewing && calendarObjectInstance.recurrenceRule"
+							:calendarObjectInstance="calendarObjectInstance"
+							:recurrenceRule="calendarObjectInstance.recurrenceRule"
+							:isReadOnly="isReadOnlyOrViewing || isViewedByOrganizer === false"
+							:isEditingMasterItem="isEditingMasterItem"
+							:isRecurrenceException="isRecurrenceException"
+							@forceThisAndAllFuture="forceModifyingFuture" />
+
+						<div class="event-popover__status-row">
+							<PropertySelect
+								:isReadOnly="isReadOnlyOrViewing"
+								:propModel="rfcProps.status"
+								:value="status"
+								@update:value="updateStatus" />
+							<PropertySelect
+								:isReadOnly="isReadOnlyOrViewing"
+								:propModel="rfcProps.timeTransparency"
+								:value="timeTransparency"
+								@update:value="updateTimeTransparency" />
 						</div>
-						<div class="event-popover__location-row">
+
+						<!-- In the viewing mode the reminders sit right below the
+							status line, so a long description cannot push them
+							out of sight -->
+						<div v-if="isReadOnlyOrViewing && hasAlarms" class="property-alarm-wrapper">
+							<Bell :size="20" class="property-alarm-icon" />
+							<AlarmList
+								:calendarObjectInstance="calendarObjectInstance"
+								:isReadOnly="true" />
+						</div>
+
+						<PropertyText
+							:isReadOnly="isReadOnlyOrViewing || isViewedByOrganizer === false"
+							:propModel="rfcProps.location"
+							:value="location"
+							:linkifyLinks="true"
+							@update:value="updateLocation" />
+						<AddTalkModal
+							v-if="isTalkModalOpen"
+							:calendarObjectInstance="calendarObjectInstance"
+							:delegatorUserId="delegatorUserId"
+							@close="isTalkModalOpen = false"
+							@updateLocation="updateLocation"
+							@updateDescription="updateDescription" />
+
+						<div class="event-popover__description-row">
 							<PropertyText
-								:isReadOnly="isReadOnlyOrViewing || isViewedByOrganizer === false"
-								:propModel="rfcProps.location"
-								:value="location"
+								:isReadOnly="isReadOnlyOrViewing"
+								:propModel="rfcProps.description"
+								:value="description"
 								:linkifyLinks="true"
-								@update:value="updateLocation" />
+								:isDescription="true"
+								@update:value="updateDescription" />
+							<!-- The conversation link mostly ends up in the description
+								(the location only takes it while empty), so the button
+								lives in the unused icon column next to it -->
 							<NcButton
 								v-if="isCreateTalkRoomButtonVisible && !isReadOnlyOrViewing"
+								class="event-popover__talk-button"
 								variant="secondary"
 								:disabled="isCreateTalkRoomButtonDisabled"
 								:ariaLabel="t('calendar', 'Add Talk conversation')"
@@ -185,21 +251,6 @@
 								</template>
 							</NcButton>
 						</div>
-						<AddTalkModal
-							v-if="isTalkModalOpen"
-							:calendarObjectInstance="calendarObjectInstance"
-							:delegatorUserId="delegatorUserId"
-							@close="isTalkModalOpen = false"
-							@updateLocation="updateLocation"
-							@updateDescription="updateDescription" />
-
-						<PropertyText
-							:isReadOnly="isReadOnlyOrViewing"
-							:propModel="rfcProps.description"
-							:value="description"
-							:linkifyLinks="true"
-							:isDescription="true"
-							@update:value="updateDescription" />
 
 						<InviteesList
 							v-if="!isViewing || (isViewing && hasAttendees)"
@@ -207,10 +258,25 @@
 							:hideButtons="true"
 							:hideErrors="true"
 							:showHeader="true"
+							:compactHeader="true"
 							:isReadOnly="isReadOnlyOrViewing || isViewedByOrganizer === false"
 							:isSharedWithMe="isSharedWithMe"
 							:calendar="selectedCalendar"
 							:calendarObjectInstance="calendarObjectInstance" />
+
+						<PropertySelect
+							v-if="showInvitationForwarding && !isReadOnlyOrViewing"
+							:isReadOnly="isReadOnlyOrViewing || isViewedByOrganizer === false"
+							:propModel="propInvitationForwarding"
+							:value="invitationForwarding"
+							@update:value="updateInvitationForwarding" />
+
+						<PropertySelect
+							v-if="!isReadOnlyOrViewing"
+							:isReadOnly="isReadOnlyOrViewing || isViewedByOrganizer === false"
+							:propModel="rfcProps.accessClass"
+							:value="accessClass"
+							@update:value="updateAccessClass" />
 
 						<InvitationResponseButtons
 							v-if="isViewedByAttendee && isViewing"
@@ -219,12 +285,26 @@
 							:calendarId="calendarId"
 							@close="closeEditorAndSkipAction" />
 
-						<div v-if="isReadOnlyOrViewing && hasAlarms" class="property-alarm-wrapper">
-							<Bell :size="20" class="property-alarm-icon" />
+						<div v-if="!isReadOnlyOrViewing" class="property-alarm-wrapper">
 							<AlarmList
 								:calendarObjectInstance="calendarObjectInstance"
 								:isReadOnly="isReadOnlyOrViewing" />
 						</div>
+
+						<AttachmentsList
+							v-if="!isReadOnlyOrViewing"
+							:calendarObjectInstance="calendarObjectInstance"
+							:isReadOnly="isReadOnlyOrViewing" />
+
+						<PropertySelectMultiple
+							v-if="!isReadOnlyOrViewing"
+							class="property-categories"
+							:coloredOptions="true"
+							:isReadOnly="isReadOnlyOrViewing"
+							:propModel="rfcProps.categories"
+							:value="categories"
+							@addSingleValue="addCategory"
+							@removeSingleValue="removeCategory" />
 					</div>
 
 					<!-- Footer -->
@@ -236,12 +316,12 @@
 							:isNew="isNew"
 							:isReadOnly="isReadOnlyOrViewing"
 							:forceThisAndAllFuture="forceThisAndAllFuture"
-							:showMoreButton="true"
-							:moreButtonType="isViewing ? 'tertiary' : undefined"
+							:showMoreButton="false"
 							:disabled="isSaving"
 							@saveThisOnly="saveAndView(false)"
-							@saveThisAndAllFuture="saveAndView(true)"
-							@showMore="showMore">
+							@saveThisAndAllFuture="saveAndView(true)">
+							<!-- The editing popover carries the full option set, so
+								'More details' IS the editor - the pencil says so -->
 							<NcButton
 								v-if="!isReadOnly && isViewing"
 								:variant="isViewedByAttendee ? 'tertiary' : undefined"
@@ -249,7 +329,7 @@
 								<template #icon>
 									<EditIcon :size="20" />
 								</template>
-								{{ $t('calendar', 'Edit') }}
+								{{ $t('calendar', 'More details') }}
 							</NcButton>
 						</SaveButtons>
 					</div>
@@ -277,6 +357,7 @@ import {
 	NcActionSeparator,
 	NcButton,
 	NcCheckboxRadioSwitch,
+	NcColorPicker,
 	NcDialog,
 	NcPopover,
 } from '@nextcloud/vue'
@@ -293,14 +374,18 @@ import Download from 'vue-material-design-icons/TrayArrowDown.vue'
 import IconVideo from 'vue-material-design-icons/VideoOutline.vue'
 import AddTalkModal from '../components/Editor/AddTalkModal.vue'
 import AlarmList from '../components/Editor/Alarm/AlarmList.vue'
+import AttachmentsList from '../components/Editor/Attachments/AttachmentsList.vue'
 import CalendarPickerHeader from '../components/Editor/CalendarPickerHeader.vue'
 import InvitationResponseButtons
 	from '../components/Editor/InvitationResponseButtons.vue'
 import InviteesList from '../components/Editor/Invitees/InviteesList.vue'
+import PropertySelect from '../components/Editor/Properties/PropertySelect.vue'
+import PropertySelectMultiple from '../components/Editor/Properties/PropertySelectMultiple.vue'
 import PropertyText from '../components/Editor/Properties/PropertyText.vue'
 import PropertyTitle from '../components/Editor/Properties/PropertyTitle.vue'
 import PropertyTitleTimePicker
 	from '../components/Editor/Properties/PropertyTitleTimePicker.vue'
+import Repeat from '../components/Editor/Repeat/Repeat.vue'
 import SaveButtons from '../components/Editor/SaveButtons.vue'
 import EditorMixin from '../mixins/EditorMixin.js'
 import useCalendarObjectInstanceStore from '../store/calendarObjectInstance.js'
@@ -338,6 +423,11 @@ export default {
 		HelpCircleIcon,
 		NcDialog,
 		AddTalkModal,
+		NcColorPicker,
+		AttachmentsList,
+		PropertySelect,
+		PropertySelectMultiple,
+		Repeat,
 		IconVideo,
 	},
 
@@ -359,14 +449,9 @@ export default {
 
 	data() {
 		return {
-			hasLocation: false,
-			hasDescription: false,
-			hasAttendees: false,
-			hasAlarms: false,
 			boundaryElement: null,
 			isVisible: true,
 			isViewing: true,
-			isCancelled: false,
 			closeMask: false,
 			showCancelDialog: false,
 			cancelButtons: [
@@ -415,6 +500,23 @@ export default {
 			return this.isReadOnly || this.isViewing || this.isWidget
 		},
 
+		// Derived from the instance instead of flags set once per instance
+		// swap: in-place edits (e.g. adding a reminder and saving) show up
+		// in the viewing mode right away, without closing and reopening
+		hasAttendees() {
+			return Array.isArray(this.calendarObjectInstance?.attendees)
+				&& this.calendarObjectInstance.attendees.length > 0
+		},
+
+		hasAlarms() {
+			return Array.isArray(this.calendarObjectInstance?.alarms)
+				&& this.calendarObjectInstance.alarms.length > 0
+		},
+
+		isCancelled() {
+			return this.calendarObjectInstance?.status === 'CANCELLED'
+		},
+
 		/**
 		 * Return the event's title or a placeholder if it is empty
 		 *
@@ -451,29 +553,7 @@ export default {
 		},
 
 		calendarObjectInstance(newVal) {
-			this.hasLocation = false
-			this.hasDescription = false
-			this.hasAttendees = false
-			this.hasAlarms = false
-			this.isCancelled = false
-
 			if (this.calendarObjectInstance) {
-				if (typeof this.calendarObjectInstance.location === 'string' && this.calendarObjectInstance.location.trim() !== '') {
-					this.hasLocation = true
-				}
-				if (typeof this.calendarObjectInstance.description === 'string' && this.calendarObjectInstance.description.trim() !== '') {
-					this.hasDescription = true
-				}
-				if (Array.isArray(this.calendarObjectInstance.attendees) && this.calendarObjectInstance.attendees.length > 0) {
-					this.hasAttendees = true
-				}
-				if (Array.isArray(this.calendarObjectInstance.alarms) && this.calendarObjectInstance.alarms.length > 0) {
-					this.hasAlarms = true
-				}
-				if (this.calendarObjectInstance.status === 'CANCELLED') {
-					this.isCancelled = true
-				}
-
 				// Reposition after content changes
 				this.$nextTick(() => {
 					this.repositionPopover()
@@ -591,23 +671,6 @@ export default {
 			this.resizeTimeout = setTimeout(() => {
 				this.repositionPopover(true)
 			}, 25)
-		},
-
-		showMore() {
-			// Do not save yet
-			this.requiresActionOnRouteLeave = false
-			this.showMask = false
-			this.isVisible = false
-
-			const params = { ...this.$route.params }
-			if (this.isNew) {
-				this.$router.push({ name: 'NewFullView', params })
-			} else {
-				this.$router.push({
-					name: getPrefixedRoute(this.$route.name, 'EditFullView'),
-					params,
-				})
-			}
 		},
 
 		getDomElementForPopover(isNew, route) {
@@ -806,7 +869,8 @@ export default {
 				top: `${top}px`,
 				left: `${left}px`,
 				zIndex: 9999,
-				maxWidth: '100vw',
+				// Fits small phone viewports (360px and up); the CSS caps the regular width
+				maxWidth: 'calc(100vw - 32px)',
 				maxHeight: `${maxH}px`,
 			}
 
@@ -888,8 +952,9 @@ export default {
 
 .event-popover {
 	position: fixed;
-	width: calc(var(--default-grid-baseline) * 120);
-	max-width: calc(var(--default-grid-baseline) * 120);
+	width: calc(var(--default-grid-baseline) * 130);
+	// Never wider than small phone viewports (360px and up) allow
+	max-width: min(calc(var(--default-grid-baseline) * 130), calc(100vw - var(--default-grid-baseline) * 8));
 	max-height: 90vh;
 	overflow: hidden;
 	background: var(--color-main-background);
@@ -948,15 +1013,347 @@ export default {
 			margin-inline-start: calc(var(--default-grid-baseline) * 3);
 			padding-inline-end: calc(var(--default-grid-baseline) * 3);
 		}
+
+		// All fields share one content column: the date-picker labels get a
+		// fixed width, so the pickers line up with the location, description
+		// and attendees fields (which indent by 13 grid units, see
+		// PropertyText and the invitees rule below)
+		:deep(.datepicker-label) {
+			flex: 0 0 20px;
+			margin-inline-start: calc(var(--default-grid-baseline) * -1);
+			margin-inline-end: calc(var(--default-grid-baseline) * 2);
+			color: var(--color-main-text);
+		}
+
+		// The selects, the recurrence summary, the reminders and the
+		// attachments share the same content column as the text fields;
+		// the select icons sit in the flex flow, so the column is set via
+		// their end margin
+		:deep(.property-select__icon),
+		:deep(.property-select-multiple__icon) {
+			// The icon containers span a full clickable area by default;
+			// shrunk, the fields sit as close to their icons as the icons
+			// sit to the edge
+			flex: 0 0 20px !important;
+			width: 20px !important;
+			min-width: 0 !important;
+			// The component's own flex gap provides the spacing
+			margin-inline-end: 0 !important;
+		}
+
+		:deep(.property-select__input),
+		:deep(.property-select-multiple__input) {
+			width: auto;
+			flex: 1;
+			min-width: 0;
+		}
+
+		// The recurrence summary is plain text, not a field: it sits on the
+		// content column like the read-only values, not on the inner text
+		// line of the boxed fields
+		:deep(.property-repeat__summary__content) {
+			margin-inline-start: 0;
+		}
+
+		:deep(.property-alarm-list) {
+			flex: 1;
+			// Without this the list refuses to go below its content width
+			// (the automatic flex minimum) and the reminder rows below never
+			// experience the pressure that makes their selects share the
+			// remaining space - the rows then leak past the field column
+			min-width: 0;
+			// The components carry no outer margins (see global.scss), so
+			// the layout provides the spacing between the reminder rows
+			display: flex;
+			flex-direction: column;
+			gap: calc(var(--default-grid-baseline) * 2);
+		}
+
+		:deep(.property-alarm-list .v-select) {
+			width: 100%;
+		}
+
+		:deep(.attachments-summary-inner-label) {
+			// Plain label without a box: it sits on the content column like
+			// the recurrence summary (the component wraps the icon in inner
+			// margins, hence the correction)
+			margin-inline-start: calc(var(--default-grid-baseline) * 5 - 9px - 14px);
+
+			h3 {
+				font-weight: normal;
+			}
+		}
+
+		// Attached files line up with the field frames instead of hanging
+		// under the icon column (the item's own 8px inner padding is part
+		// of the offset)
+		:deep(.attachments-list) {
+			margin-inline: calc(var(--default-grid-baseline) * 9 - 8px) 0;
+		}
+
+		// One text line for every field: the select internals are aligned
+		// app-wide in global.scss; the status chips render inside
+		// vs__selected, so their line offset comes from there
+
+		// The calendar glyphs inside the date/time inputs and the globe of
+		// the timezone button share the same line
+		:deep(.property-title-time-picker__time-pickers-from-inner__selectors svg) {
+			margin-inline-start: 14px;
+		}
+
+		// Read-only rows center their icon on the value text, which sits
+		// right next to the icon instead of out on the field column
+		:deep(.property-select--readonly),
+		:deep(.property-select--readonly .property-select__input) {
+			display: flex;
+			align-items: center;
+			gap: calc(var(--default-grid-baseline) * 2) !important;
+		}
+
+		:deep(.property-select--readonly .property-select__icon) {
+			// The icon container is a full clickable area wide; shrink it to
+			// the glyph so the value sits right next to it
+			width: 20px !important;
+			margin-inline-end: calc(var(--default-grid-baseline) * 2) !important;
+		}
+
+		&--viewing :deep(.property-title-time-picker-read-only-wrapper__label) {
+			margin-inline-start: 0;
+			padding-inline-start: 0;
+		}
+
+		// In the viewing mode the description is plain text, not a field;
+		// space runs collapse, so wrapped lines never start with blanks
+		&--viewing :deep(.property-text__readonly-value) {
+			border: none;
+			padding: 0;
+			margin-bottom: 0;
+			white-space: pre-line;
+		}
+
+		:deep(.property-select--readonly .property-select__input) {
+			padding-inline-start: 0 !important;
+
+			> * {
+				margin-inline-start: 0 !important;
+				padding-inline-start: 0 !important;
+			}
+		}
+
+		// Existing reminders line up on the field column, their menus at
+		// the far end
+		:deep(.property-alarm-item) {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		// The inline alarm editor (amount, unit, time) shares the column of
+		// the other fields
+		// The inline alarm editor expands in the flow (it is absolutely
+		// positioned for the full editor and overlapped the rows below).
+		// Field width design, like everywhere in the editor: a row of
+		// fields spans the full content column, ending on the same edge as
+		// every other field; several fields in one row share it equally
+		// (the pattern of the date/time halves)
+		:deep(.property-alarm-item__edit) {
+			position: static !important;
+			margin-inline-start: calc(var(--default-grid-baseline) * 9);
+			width: auto !important;
+			flex: 1 1 auto;
+			min-width: 0;
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: calc(var(--default-grid-baseline) * 2);
+
+			> * {
+				flex: 1 1 0;
+				min-width: 0;
+			}
+		}
+
+		// These selects sit on the same 14px text line as every other
+		// field (the inset is inherited from global.scss, not trimmed
+		// here) so their value lines up with the fields above and with
+		// their own dropdown options. When a select's share is truly too
+		// small the value ellipsizes gracefully instead of pushing out.
+		:deep(.property-alarm-item__edit .v-select.select:not(.vs--multiple) .vs__selected) {
+			flex: 0 1 auto;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		:deep(.property-alarm-item__edit .v-select.select .vs__search) {
+			// ... which in turn must not grow into the value's space - it
+			// keeps an intrinsic width even when empty, so it is pinned to
+			// a caret-thin sliver in both states (two options need no
+			// type-ahead, and the box must not change width on opening)
+			flex: 0 0 auto !important;
+			width: 2px !important;
+			min-width: 0 !important;
+			padding: 0 !important;
+			margin-inline: 0 !important;
+		}
+
+		:deep(.property-alarm-item__edit .v-select.select .vs__actions) {
+			padding-inline: 0 2px;
+			// The library reserves room for a clear button that never
+			// renders here; without a floor the chevron column takes just
+			// its rendered width
+			flex: 0 0 auto;
+			min-width: 0;
+		}
+
+		:deep(.property-alarm-item__edit .v-select.select .vs__selected-options) {
+			// The value carries its own text-line margin; the container's
+			// padding would only eat into the readable width. Grown from
+			// zero it takes everything the chevron leaves - the phantom
+			// minimum of the actions column stops shrinking it otherwise
+			flex: 1 1 0;
+			min-width: 0;
+			padding-inline: 0 !important;
+		}
+
+		:deep(.property-alarm-item__edit input[type='time']) {
+			padding-inline: calc(var(--default-grid-baseline));
+		}
+
+		// While open, vue-select floats the value out of the layout, which
+		// collapsed these width-by-value selects to their tiny search
+		// field and let the dropdown panel overhang. The value stays in
+		// the flow instead, so the box keeps its width in both states,
+		// and the panel follows the box
+		:deep(.property-alarm-item__edit .v-select.select.vs--open .vs__selected) {
+			position: static !important;
+			opacity: .6;
+		}
+
+		// The compact amount fields hold three digits; the browser's
+		// spinner would eat exactly that space
+		:deep(.property-alarm-item__edit input[type='number']) {
+			appearance: textfield;
+
+			&::-webkit-inner-spin-button,
+			&::-webkit-outer-spin-button {
+				appearance: none;
+				margin: 0;
+			}
+		}
+
+		// One line, always, flush on both edges - by construction, for
+		// the timed and the all-day editor alike: the amount is
+		// font-scaled (em), the time keeps its natural width, and the
+		// selects (unit, direction) share whatever remains equally,
+		// growing and shrinking so the line ends exactly on the actions
+		// column on every density. The groups leave the layout entirely.
+		:deep(.property-alarm-item__edit--all-day__distance),
+		:deep(.property-alarm-item__edit--all-day__time) {
+			display: contents;
+		}
+
+		:deep(.property-alarm-item__edit--timed),
+		:deep(.property-alarm-item__edit--all-day) {
+			flex-wrap: nowrap;
+			gap: var(--default-grid-baseline);
+		}
+
+		:deep(.property-alarm-item__edit .input-field) {
+			// Three digits at any font size (the spinner is hidden)
+			flex: 0 0 4.5em;
+		}
+
+		:deep(.property-alarm-item__edit .v-select.select) {
+			// Their own value width is the base of the distribution, so the
+			// surplus lands on top of readable values (and the dropdown,
+			// which follows the box width, fits its options); only when the
+			// line is truly short do they shrink and ellipsize
+			flex: 1 1 auto;
+			min-width: 0;
+			width: auto;
+		}
+
+		:deep(.property-alarm-item__edit .native-datetime-picker) {
+			flex: 0 0 auto;
+			min-width: max-content;
+		}
+
+		:deep(.property-alarm-item__front) {
+			// Lines up with the preview text inside the selects
+			margin-inline-start: calc(var(--default-grid-baseline) * 9 + 14px) !important;
+		}
+
+		// In the viewing mode the bell icon fills the label column, so the
+		// alarm text needs only the remaining gap to sit on the field line
+		// (this rule must follow the editing rule above - same specificity)
+		&--viewing :deep(.property-alarm-item__front) {
+			margin-inline-start: calc(var(--default-grid-baseline) * 4) !important;
+		}
+
+		// The date and the time picker share the row in two equal halves,
+		// and the footer row below mirrors exactly these halves: the
+		// timezone lands under the date column, the all-day toggle under
+		// the time column - robust against density and font differences,
+		// unlike fixed pixel offsets
+		:deep(.property-title-time-picker__time-pickers-from-inner__selectors > *) {
+			flex: 1 1 0;
+			width: auto;
+			min-width: 0;
+		}
+
+		:deep(.property-title-time-picker__time-pickers-from-inner__selectors .mx-datepicker) {
+			width: 100%;
+		}
+
+		:deep(.property-title-time-picker__footer-row) {
+			margin-inline-start: calc(var(--default-grid-baseline) * 9);
+			position: relative;
+			min-height: calc(var(--default-clickable-area) + var(--default-grid-baseline) * 2);
+		}
+
+		// The globe starts at the column like the calendar glyph inside the
+		// date input (the button's icon slot centers the icon on the
+		// clickable area, which matches the glyph inset of the input)
+		:deep(.property-title-time-picker__footer-row > .button-vue) {
+			margin-inline-start: 0;
+			padding-inline-start: var(--default-grid-baseline);
+		}
+
+		// The all-day toggle is anchored to the second (time) column, which
+		// starts exactly at half the row now that both pickers share it
+		// equally; without times (all-day events) it moves to the first
+		// (date) column. Its internal paddings are stripped, so the box
+		// itself sits on the column.
+		.event-popover__all-day {
+			position: absolute;
+			top: 0;
+			// Plus the glyph inset inside the input (its inline padding)
+			inset-inline-start: calc(50% + var(--default-grid-baseline) / 2 + var(--default-grid-baseline) * 3);
+
+			&--all-day {
+				inset-inline-start: calc(var(--default-grid-baseline) * 2);
+			}
+
+			:deep(.checkbox-radio-switch__content) {
+				padding-inline-start: 0;
+			}
+
+			// The box center already sits under the clock glyph of the time
+			// input; its container is 3px wider than the input's text inset,
+			// so the label is pulled onto the time text line
+			:deep(.checkbox-content__icon) {
+				margin-inline-end: -3px;
+			}
+		}
+
 	}
 
 	.event-popover__footer {
 		flex-shrink: 0;
 		padding-top: calc(var(--default-grid-baseline) * 2);
 		background: var(--color-main-background);
-	}
-	.event-popover__all-day {
-		margin-inline-start: calc(var(--default-grid-baseline) * 11);
 	}
 
 	.event-popover__loading-icon {
@@ -965,16 +1362,21 @@ export default {
 
 	.event-popover__top-actions {
 		display: flex;
+		align-items: center;
 		gap: var(--default-grid-baseline);
 		position: absolute !important;
 		top: var(--default-grid-baseline) !important;
 		z-index: 100 !important;
-		opacity: .7 !important;
-		align-items: center;
 		inset-inline-end : var(--default-grid-baseline) !important;
 		.action-item.action-item--single {
 			width: 44px !important;
 			height: 44px !important;
+		}
+
+		// Only the action buttons are dimmed; the color dot must show the
+		// real calendar color
+		.action-item {
+			opacity: .7;
 		}
 	}
 }
@@ -983,21 +1385,65 @@ export default {
 	display: flex;
 	align-items: center;
 
-	// In the simple popover there is no label column to align with, so strip
-	// the large indent that app-full.scss adds for the full editor layout.
-	:deep(.property-alarm-item__front) {
-		margin-inline-start: calc(var(--default-grid-baseline) * 4);
+}
+
+.event-popover__status-row {
+	display: flex;
+
+	// The second select keeps its icon visibly next to its own field: the
+	// row gap stays wider than the icon's own gap
+	gap: calc(var(--default-grid-baseline) * 4);
+
+	> * {
+		flex: 1 1 0;
+		min-width: 0;
+	}
+
+	> *:last-child :deep(.property-select__icon) {
+		margin-inline-end: calc(var(--default-grid-baseline) * 2);
+	}
+
+	:deep(.v-select) {
+		min-width: 0 !important;
+		width: 100%;
 	}
 }
 
-.event-popover__location-row {
-	display: flex;
-	align-items: start;
-	gap: var(--default-grid-baseline);
+.event-popover__color-dot {
+	appearance: none;
+	width: 24px;
+	height: 24px;
+	min-width: 24px;
+	min-height: 24px !important;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	cursor: pointer;
+}
 
-	.property-text {
-		flex: 1;
-		min-width: 0;
+.event-popover__description-row {
+	position: relative;
+
+	// The textarea pulls following content up by a negative bottom margin
+	// (see PropertyText) and leaves inline baseline space below itself;
+	// neutralize both so the row ends flush with the visible field and
+	// the Talk button can anchor to its bottom edge
+	:deep(textarea) {
+		display: block;
+		margin-bottom: 0 !important;
+	}
+
+	// The Talk button sits in the otherwise unused icon column, flush with
+	// the bottom edge of the description field
+	.event-popover__talk-button {
+		position: absolute;
+		bottom: 0;
+		inset-inline-start: 0;
+		// Compact, so it stays clear of the field next to it
+		min-width: 0 !important;
+		min-height: 0 !important;
+		width: calc(var(--default-grid-baseline) * 7) !important;
+		height: calc(var(--default-grid-baseline) * 7) !important;
 	}
 }
 

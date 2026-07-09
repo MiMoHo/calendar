@@ -34,19 +34,16 @@ function getRFCProperties() {
 			readableName: t('calendar', 'Location'),
 			placeholder: t('calendar', 'Add a location'),
 			icon: 'MapMarker',
+			defaultNumberOfRows: 4,
 		},
 		/**
 		 * https://tools.ietf.org/html/rfc5545#section-3.8.1.5
 		 */
 		description: {
 			readableName: t('calendar', 'Description'),
-			placeholder: t('calendar', 'Add a description\n'
-			+ '\n'
-			+ '- What is this meeting about\n'
-			+ '- Agenda items\n'
-			+ '- Anything participants need to prepare'),
+			placeholder: t('calendar', 'Add a description'),
 			icon: 'TextBoxOutline',
-			defaultNumberOfRows: 2,
+			defaultNumberOfRows: 3,
 		},
 		/**
 		 * https://tools.ietf.org/html/rfc5545#section-3.8.1.11

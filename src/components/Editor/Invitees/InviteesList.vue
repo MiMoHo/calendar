@@ -5,7 +5,34 @@
 
 <template>
 	<div v-if="!(invitees.length === 0 && isReadOnly)" class="invitees-list">
-		<div v-if="showHeader" class="invitees-list__header">
+		<!-- Compact one-line variant used by the simple editor: icon and
+			count in the label column, the search flush with the other
+			fields, the copy action at the far end -->
+		<div v-if="showHeader && compactHeader" class="invitees-list__header invitees-list__header--compact">
+			<div
+				class="invitees-list__header__count"
+				:class="{ 'invitees-list__header__count--wide': invitees.length + 1 >= 10 }">
+				<AccountMultipleIcon :size="20" />
+				<NcCounterBubble :count="invitees.length + 1" />
+			</div>
+			<InviteesListSearch
+				v-if="!isReadOnly && hasUserEmailAddress"
+				class="invitees-list__header__search"
+				:alreadyInvitedEmails="alreadyInvitedEmails"
+				:organizer="calendarObjectInstance.organizer"
+				@addAttendee="addAttendee" />
+			<NcButton
+				variant="tertiary"
+				:disabled="invitees.length === 0"
+				:aria-label="t('calendar', 'Copy attendees to clipboard')"
+				:title="t('calendar', 'Copy attendees to clipboard')"
+				@click="copyAttendeesToClipboard">
+				<template #icon>
+					<ContentCopy :size="20" />
+				</template>
+			</NcButton>
+		</div>
+		<div v-if="showHeader && !compactHeader" class="invitees-list__header">
 			<div class="invitees-list__header__title">
 				<AccountMultipleIcon :size="20" />
 				<span class="invitees-list__header__title__text">{{ t('calendar', 'Attendees') }}</span>
@@ -47,12 +74,12 @@
 			</div>
 		</div>
 
-		<div class="invitees-list__subtitle">
+		<div v-if="!compactHeader" class="invitees-list__subtitle">
 			{{ statusHeader }}
 		</div>
 
 		<InviteesListSearch
-			v-if="!isReadOnly && hasUserEmailAddress"
+			v-if="!isReadOnly && hasUserEmailAddress && !compactHeader"
 			:alreadyInvitedEmails="alreadyInvitedEmails"
 			:organizer="calendarObjectInstance.organizer"
 			@addAttendee="addAttendee" />
@@ -137,6 +164,11 @@ export default {
 		calendarObjectInstance: {
 			type: Object,
 			required: true,
+		},
+
+		compactHeader: {
+			type: Boolean,
+			default: false,
 		},
 
 		showHeader: {
@@ -541,6 +573,54 @@ export default {
 				text-overflow: unset !important;
 			}
 		}
+	}
+}
+
+.invitees-list__header--compact {
+	display: flex;
+	align-items: center;
+	// Icon width plus this gap equals the label column of the simple
+	// editor, so the search field starts on the field line of the other
+	// rows
+	gap: calc(var(--default-grid-baseline) * 4);
+
+	.invitees-list__header__count {
+		// Exactly the icon column, so the search field starts on the field
+		// line; the counter sits in the gap between the icon and the field
+		// without covering either
+		position: relative;
+		flex: 0 0 20px;
+		min-width: 0;
+
+		:deep(.counter-bubble__counter) {
+			position: absolute;
+			top: 50%;
+			transform: translateY(-50%);
+			inset-inline-start: calc(20px + var(--default-grid-baseline) / 2);
+			min-width: 0;
+			padding-inline: calc(var(--default-grid-baseline) / 2);
+		}
+
+		// From two digits on the gap is too narrow: the counter joins the
+		// flow and the field yields to the right, so everything stays
+		// fully visible
+		&--wide {
+			flex: 0 0 auto;
+			display: flex;
+			align-items: center;
+			gap: var(--default-grid-baseline);
+
+			:deep(.counter-bubble__counter) {
+				position: static;
+				transform: none;
+				padding-inline: var(--default-grid-baseline);
+			}
+		}
+	}
+
+	.invitees-list__header__search {
+		flex: 1 1 auto;
+		min-width: 0;
 	}
 }
 </style>

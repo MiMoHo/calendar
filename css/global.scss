@@ -22,3 +22,213 @@
 .app-navigation-spacer {
 	list-style-type: none;
 }
+
+// Modals opened from within the editor popover (Talk rooms, recurrence
+// options, ...) must paint above it: the popover outstacks the default
+// modal mask. Only teleported modals are lifted; the popover's own
+// backdrop keeps its place below it.
+// The dialogs of @nextcloud/dialogs (e.g. the attachment file picker)
+// mount their mask one wrapper level deeper; only their dialog masks are
+// lifted - a generic selector would also lift the popover's own backdrop
+// and block it
+body > .modal-mask,
+body > div > .dialog__modal.modal-mask {
+	z-index: 99999 !important;
+}
+
+// One text line per field, app-wide: typed text sits behind the 2px field
+// border with a 12px inset. The select values, the search inputs, the
+// multiselect chips and the opened dropdown options all share that inset,
+// so a value never moves when a field changes between its states.
+// One 14px text line for every field, pinned instead of derived: the
+// component library sizes the select toggle's inset with theme
+// variables (border-width-input as padding when closed, as border when
+// open) and resolves several rules at the same specificity as this
+// server-loaded stylesheet, so both theme values AND stylesheet order
+// changed the line between environments. Fixed pixels plus !important
+// plus strictly higher specificity make the line independent of theme
+// variables, component state and load order.
+.v-select.select {
+	// Spacing between rows belongs to the layout (gaps), not to the
+	// component: the built-in bottom margin skewed the select's frame a
+	// few pixels against its row neighbours
+	margin-block: 0 !important;
+	// One frame height for every field type in the app (the inputs and
+	// the native pickers pin the same formula), so no environment can
+	// render them unequal
+	height: calc(var(--default-clickable-area) + 2 * var(--vs-border-width, 1px)) !important;
+	min-height: 0 !important;
+
+	.vs__dropdown-toggle {
+		// One canonical field frame for the whole app: 2px solid, like
+		// the text areas - instead of the library's border/shadow mixes.
+		// Padding keeps the inline inset at 3px; the open state keeps its
+		// stronger border color from the library (the color is
+		// deliberately not pinned with !important)
+		border-width: 2px !important;
+		border-style: solid !important;
+		border-color: var(--color-border-maxcontrast);
+		box-shadow: none !important;
+		padding-inline: 1px !important;
+		// The library keeps a min-height of one clickable area on the
+		// toggle; with the added 2px border on each side that made the
+		// toggle two pixels taller than its root, so its bottom border
+		// painted past the frame and looked clipped (every select in the
+		// app showed it). Filling the root exactly, border-box, puts the
+		// whole 2px frame back inside - in any theme, because the root's
+		// height comes from the same variable formula as every field.
+		box-sizing: border-box;
+		height: 100%;
+		min-height: 0 !important;
+	}
+
+	&.vs--open .vs__dropdown-toggle {
+		border-inline-width: 2px !important;
+		padding-inline: 1px !important;
+	}
+
+	.vs__selected-options {
+		padding-inline: 0 5px !important;
+	}
+
+	.vs__search {
+		margin-inline: 0 !important;
+		padding-inline-start: 11px !important;
+	}
+
+	&:not(.vs--multiple) .vs__selected {
+		margin-inline-start: 11px !important;
+		padding-inline-start: 0 !important;
+	}
+
+	// While open, the library absolutely positions the (dimmed) value at
+	// the container edge and re-margins it with an important first-of-type
+	// rule - out-specify it, so the value stays on the text line
+	&.vs--open:not(.vs--multiple) .vs__selected:first-of-type {
+		inset-inline-start: 0 !important;
+		margin-inline-start: 11px !important;
+	}
+
+	// Multiselects: the first chip sits on the text line (the container
+	// carries the inset so wrapped chip rows line up too) and every chip
+	// keeps a clear gap to the next one, so the removal cross visibly
+	// belongs to its own chip
+	&.vs--multiple {
+		.vs__selected-options {
+			padding-inline: 11px 5px !important;
+		}
+
+		.vs__search {
+			padding-inline-start: 0 !important;
+		}
+
+		.vs__selected,
+		.property-select-multiple-colored-tag {
+			margin-inline: 0 calc(var(--default-grid-baseline) * 3) !important;
+		}
+	}
+}
+
+// The dropdown panels are teleported into plain wrappers under body and
+// carry a 160px minimum width from this variable; set on body (nearer to
+// the panel than the server's :root, so it wins by proximity), the panels
+// follow their select box instead of overhanging narrow ones
+body {
+	--vs-dropdown-min-width: 0px;
+}
+
+// The menu border is themed and the option padding ships with the
+// library; pinned, the option texts sit on the very line of the value
+// shown in the closed select (2px border + 4px menu padding + 8px)
+ul.vs__dropdown-menu {
+	border-inline-width: 2px !important;
+	padding-inline: 4px !important;
+
+	li.vs__dropdown-option {
+		padding-inline: 8px 20px !important;
+	}
+}
+
+// nextcloud text inputs read their inset from this variable (the
+// floating label follows it too). Pinned app-wide - not per spot - so
+// typed text sits on the same 14px line as the select values and the
+// textareas everywhere in the calendar (the title field, the recurrence
+// modal, the inline reminder editor, ...); the header's unified search
+// stays out of scope
+// :not(.input-field--leading-icon) does two jobs: fields with a leading
+// icon keep their larger inset, and the selectors outweigh the
+// component's own var definition (same specificity otherwise - the
+// winner would depend on stylesheet order, which differs per
+// environment; that is exactly how this fix once failed to arrive)
+#app-navigation-vue .input-field:not(.input-field--leading-icon),
+#app-content-vue .input-field:not(.input-field--leading-icon),
+.event-popover .input-field:not(.input-field--leading-icon),
+body > .modal-mask .input-field:not(.input-field--leading-icon),
+body > div > .modal-mask .input-field:not(.input-field--leading-icon) {
+	// 12px + the 2px canonical border = the 14px text line
+	--input-padding-start: 12px;
+	// The component pads its wrapper by the focused border width to make
+	// room for the focus ring, which shifted the visible field edge off
+	// the line of the other fields; the counter-margin puts the edge back
+	// on the slot (the ring pokes into the gutter, like the selects' one)
+	margin-inline: calc(-1 * var(--border-width-input-focused, 2px));
+	// In a flex row the counter-margins alone stretch the box across
+	// both slot edges; in block flow they only shift it, leaving the
+	// visible frame two pixels short on the right (the title field
+	// showed it) - the width hands the margins back on both sides
+	width: calc(100% + 2 * var(--border-width-input-focused, 2px));
+
+	// Vertically the same ring padding made the visible frame two pixels
+	// lower than the selects'; without it, the frames of inputs and
+	// selects share top and bottom edges (the focus ring overlaps the
+	// neighbouring rows while focused, like the selects' one)
+	.input-field__main-wrapper {
+		padding-block: 0;
+		// The component keeps its wrapper one clickable area tall while
+		// the selects draw their border around that area (content-box);
+		// the same formula keeps every frame in a row on shared top and
+		// bottom edges - the inner input already carries it
+		height: calc(var(--default-clickable-area) + 2 * var(--vs-border-width, 1px)) !important;
+	}
+
+	.input-field__input {
+		// The canonical field frame (the focus ring still applies while
+		// focused: the library's focus rule outweighs this one)
+		border: 2px solid var(--color-border-maxcontrast) !important;
+		box-shadow: none !important;
+		// Fill the pinned wrapper exactly, border-box, so the 2px frame
+		// stays inside it (a fixed height left the input a pixel taller
+		// than its wrapper and the bottom edge poked out)
+		box-sizing: border-box;
+		height: 100% !important;
+		min-height: 0 !important;
+	}
+}
+
+// The native date and time inputs draw their frame at the same height
+// and in the same stroke as the selects
+.event-popover .native-datetime-picker__input,
+body > .modal-mask .native-datetime-picker__input,
+body > div > .modal-mask .native-datetime-picker__input {
+	height: calc(var(--default-clickable-area) + 2 * var(--vs-border-width, 1px)) !important;
+	min-height: 0 !important;
+	border: 2px solid var(--color-border-maxcontrast) !important;
+	box-shadow: none !important;
+	// The 2px frame stays inside the pinned height instead of adding to it
+	box-sizing: border-box;
+}
+
+// The date and time inputs of the pickers share the canonical 2px frame
+// (their library default is a nearly invisible 1px); the inner padding
+// gives the 2px back, so the text and glyph columns stay put
+.event-popover .dp__input,
+body > .modal-mask .dp__input,
+body > div > .modal-mask .dp__input {
+	border: 2px solid var(--color-border-maxcontrast) !important;
+}
+
+.event-popover .dp__input.dp__input_icon_pad,
+body > .modal-mask .dp__input.dp__input_icon_pad,
+body > div > .modal-mask .dp__input.dp__input_icon_pad {
+	padding-inline-start: 33px !important;
+}
