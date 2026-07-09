@@ -195,7 +195,7 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 				}
 			}
 
-			const attendeeCount = object.hasComponent('ATTENDEE')
+			const attendeeCount = object.hasProperty('ATTENDEE')
 				? [...object.getPropertyIterator('ATTENDEE')].length
 				: 0
 

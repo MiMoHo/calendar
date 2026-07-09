@@ -68,6 +68,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
 		}, {
@@ -88,6 +89,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			title: 'Untitled\nmultiline\nevent',
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
@@ -109,6 +111,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(true),
+			hasProperty: vi.fn().mockReturnValue(false),
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
 		}]
@@ -130,6 +133,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
 		}]
@@ -151,6 +155,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			color: 'red',
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
@@ -477,6 +482,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			percent: null,
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
@@ -498,6 +504,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			percent: null,
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
@@ -519,6 +526,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			percent: 99,
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
@@ -540,6 +548,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			title: 'This task has a title',
 			percent: null,
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
@@ -562,6 +571,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				})
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			title: 'This task has a title and percent',
 			percent: 99,
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
@@ -574,6 +584,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 			getReferenceRecurrenceId: vi.fn().mockReturnValue({ unixTime: 123 }),
 			canModifyAllDay: vi.fn().mockReturnValue(false),
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			title: 'Task without Due',
 			startDate: null,
 			endDate: null,
@@ -778,6 +789,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 			startDate: { getInTimezone: vi.fn().mockReturnValue({ jsDate: new Date(2020, 1, 1, 10, 0, 0) }) },
 			endDate: { getInTimezone: vi.fn().mockReturnValue({ jsDate: new Date(2020, 1, 1, 11, 0, 0) }) },
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getFirstProperty: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
@@ -852,6 +864,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 			startDate: { getInTimezone: vi.fn().mockReturnValue({ jsDate: new Date(2020, 1, 1, 10, 0, 0) }) },
 			endDate: { getInTimezone: vi.fn().mockReturnValue({ jsDate: new Date(2020, 1, 1, 11, 0, 0) }) },
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getFirstProperty: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
@@ -912,6 +925,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				getInTimezone: vi.fn().mockReturnValue({ jsDate: end }),
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+		hasProperty: vi.fn().mockReturnValue(false),
 			hasProperty: vi.fn().mockImplementation((name) => name === 'ATTENDEE' && attendees.length > 0),
 			getFirstPropertyFirstValue: vi.fn().mockImplementation((name) => {
 				if (name === 'ORGANIZER') {
@@ -1044,6 +1058,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				getInTimezone: vi.fn().mockReturnValue({ jsDate: end }),
 			},
 			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockReturnValue(false),
 			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
 			getPropertyIterator: vi.fn().mockReturnValue([]),
 		}
