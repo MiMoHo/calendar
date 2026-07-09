@@ -58,9 +58,9 @@ describe('Test suite: RFC properties (models/rfcProps.js)', () => {
 		expect(rfcProps.status.info).toEqual('Confirmation about the overall status of the event.')
 		expect(rfcProps.status.defaultValue).toEqual('CONFIRMED')
 		expect(rfcProps.status.options).toEqual([
-			{ value: 'CONFIRMED', label: 'Confirmed' },
-			{ value: 'TENTATIVE', label: 'Tentative' },
-			{ value: 'CANCELLED', label: 'Canceled' },
+			{ value: 'CONFIRMED', label: 'Confirmed', styleClass: 'confirmed' },
+			{ value: 'TENTATIVE', label: 'Tentative', styleClass: 'tentative' },
+			{ value: 'CANCELLED', label: 'Canceled', styleClass: 'cancelled' },
 		])
 
 		expect(rfcProps.timeTransparency).toEqual(expect.any(Object))

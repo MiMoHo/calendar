@@ -54,10 +54,12 @@ function getRFCProperties() {
 		status: {
 			readableName: t('calendar', 'Status'),
 			icon: 'Check',
+			// styleClass previews the formatting the status gets in the
+			// calendar grid, mirroring the event legend
 			options: [
-				{ value: 'CONFIRMED', label: t('calendar', 'Confirmed') },
-				{ value: 'TENTATIVE', label: t('calendar', 'Tentative') },
-				{ value: 'CANCELLED', label: t('calendar', 'Canceled') },
+				{ value: 'CONFIRMED', label: t('calendar', 'Confirmed'), styleClass: 'confirmed' },
+				{ value: 'TENTATIVE', label: t('calendar', 'Tentative'), styleClass: 'tentative' },
+				{ value: 'CANCELLED', label: t('calendar', 'Canceled'), styleClass: 'cancelled' },
 			],
 			multiple: false,
 			info: t('calendar', 'Confirmation about the overall status of the event.'),

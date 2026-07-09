@@ -30,9 +30,17 @@
 				:inputId="readableName + '-select-input'"
 				:ariaLabelCombobox="readableName"
 				:ariaLabelListbox="readableName"
-				label="label" />
-			<!-- eslint-disable-next-line vue/singleline-html-element-content-newline -->
-			<div v-else>{{ selectedValue.label }}</div>
+				label="label">
+				<template #option="option">
+					<span :class="optionClasses(option)">{{ option.label }}</span>
+				</template>
+				<template #selected-option="option">
+					<span :class="optionClasses(option)">{{ option.label }}</span>
+				</template>
+			</NcSelect>
+			<div v-else>
+				<span :class="optionClasses(selectedValue)">{{ selectedValue.label }}</span>
+			</div>
 		</div>
 	</div>
 </template>
@@ -77,6 +85,22 @@ export default {
 			},
 		},
 	},
+
+	methods: {
+		/**
+		 * Classes rendering an option in the same formatting the event legend
+		 * uses for the corresponding state in the calendar grid.
+		 *
+		 * @param {object|undefined} option The select option
+		 * @return {string[]} The class list for the option
+		 */
+		optionClasses(option) {
+			if (!option?.styleClass) {
+				return []
+			}
+			return ['property-select__option', `property-select__option--${option.styleClass}`]
+		},
+	},
 }
 </script>
 
@@ -86,7 +110,37 @@ export default {
 	&__input {
 		// 34px left and right need to be subtracted. See https://github.com/nextcloud/calendar/pull/3361
 		width: calc(100% - 34px - 34px);
+
+		// Long selected options may wrap; a compact line height keeps the
+		// two lines within the select frame
+		:deep(.vs__selected) {
+			line-height: 1.15;
+			white-space: normal;
+		}
 	}
 }
 
+// Mirrors the formatting of the calendar grid and the event legend: the
+// vertical bar on the left in the color of the selected calendar (or the
+// custom event color), bold for confirmed, bold italic for tentative,
+// struck through for canceled events.
+.property-select__option {
+	display: inline-block;
+	padding-inline: var(--default-grid-baseline);
+	border-inline-start: calc(var(--default-grid-baseline) * 2) solid var(--nc-editor-calendar-color, var(--color-primary-element));
+	font-weight: normal;
+
+	&--confirmed {
+		font-weight: bold;
+	}
+
+	&--tentative {
+		font-weight: bold;
+		font-style: italic;
+	}
+
+	&--cancelled {
+		text-decoration: line-through;
+	}
+}
 </style>
