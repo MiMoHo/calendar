@@ -40,6 +40,7 @@ import momentPlugin from '../fullcalendar/localization/momentPlugin.js'
 // Import rendering handlers
 import dayCellDidMount from '../fullcalendar/rendering/dayCellDidMount.js'
 import dayHeaderDidMount from '../fullcalendar/rendering/dayHeaderDidMount.js'
+import eventContent from '../fullcalendar/rendering/eventContent.ts'
 import eventDidMount from '../fullcalendar/rendering/eventDidMount.js'
 import {
 	allDayFirst,
@@ -112,6 +113,16 @@ export default {
 		]),
 
 		...mapState(useCalendarObjectsStore, ['modificationCount']),
+
+		allCalendarsLoaded() {
+			const calendars = this.calendarsStore?.calendars ?? []
+			return calendars.length > 0 && calendars.every((calendar) => !calendar.loading)
+		},
+
+		calendarObjectCount() {
+			return Object.keys(this.calendarObjectsStore?.calendarObjects ?? {}).length
+		},
+
 		...mapState(useWidgetStore, [
 			'widgetView',
 			'widgetDate',
@@ -145,9 +156,16 @@ export default {
 				// Rendering
 				dayCellDidMount,
 				dayHeaderDidMount,
+				eventContent,
 				eventDidMount,
 				noEventsDidMount,
+				// All day-grid events render as blocks: the vertical bar marks
+				// busy/free, the thin bar above the title shows the duration
+				eventDisplay: 'block',
 				eventOrder: [allDayFirst, allDayOrder, partDayOrder],
+				// Parallel events get real side-by-side columns instead of the
+				// full-width overlay, so their flowing text stays in its column
+				slotEventOverlap: false,
 				forceEventDuration: false,
 				headerToolbar: false,
 				height: '100%',
@@ -156,6 +174,22 @@ export default {
 				weekNumbers: this.showWeekNumbers,
 				weekends: this.showWeekends,
 				dayMaxEventRows: this.eventLimit,
+				views: {
+					multiMonthYear: {
+						// fullcalendar's multi-month view always limits event rows
+						// by cell height (it hardcodes dayMaxEventRows: true), so
+						// the cells are made tall enough for three compact rows via
+						// the aspect ratio; more events collapse into an outlined
+						// counter box (see CSS)
+						aspectRatio: 1.0,
+						displayEventTime: false,
+						moreLinkContent: (arg) => String(arg.num),
+						// Two months per row on typical screens: one on phones,
+						// more only on very wide screens
+						multiMonthMinWidth: 600,
+					},
+				},
+
 				selectMirror: true,
 				lazyFetching: false,
 				nowIndicator: true,
@@ -176,14 +210,17 @@ export default {
 		},
 
 		eventSources() {
+			const getViewType = () => this.$refs.fullCalendar?.getApi()?.view?.type
+				?? this.$route?.params?.view
+				?? null
 			if (this.isWidget) {
 				const calendar = this.calendarsStore.getCalendarByUrl(this.url)
 				if (!calendar) {
 					return []
 				}
-				return [calendar].map(eventSource())
+				return [calendar].map(eventSource(getViewType))
 			}
-			return this.calendarsStore.enabledCalendars.map(eventSource())
+			return this.calendarsStore.enabledCalendars.map(eventSource(getViewType))
 		},
 
 		/**
@@ -226,6 +263,24 @@ export default {
 			const calendarApi = this.$refs.fullCalendar.getApi()
 			calendarApi.refetchEvents()
 		}, 50),
+
+		// The flow limits consider the events of all calendars, but sources
+		// resolve one calendar at a time; one refetch after the last one
+		// finishes lets every event see all neighbours
+		allCalendarsLoaded(loaded) {
+			if (loaded) {
+				const calendarApi = this.$refs.fullCalendar?.getApi()
+				calendarApi?.refetchEvents()
+			}
+		},
+
+		// Newly fetched objects of one calendar sharpen the flow limits of
+		// the others; re-render once the fetches settle (cached sources
+		// skip unchanged objects, so this cannot loop)
+		calendarObjectCount: debounce(function() {
+			const calendarApi = this.$refs.fullCalendar?.getApi()
+			calendarApi?.refetchEvents()
+		}, 300),
 
 		searchQuery: debounce(function() {
 			const calendarApi = this.$refs.fullCalendar.getApi()

@@ -10,25 +10,6 @@
 			{{ t('calendar', 'Calendar events are styled to convey additional information at a glance.') }}
 		</p>
 
-		<!-- Free / Busy -->
-		<h3 class="event-legend__heading">
-			{{ t('calendar', 'Free / Busy') }}
-		</h3>
-		<ul class="event-legend__list">
-			<li class="event-legend__item">
-				<div class="event-legend__demo event-legend__demo--busy">
-					<span class="event-legend__demo-title">{{ t('calendar', 'Busy') }}</span>
-				</div>
-				<span class="event-legend__label">{{ t('calendar', 'Busy: your time is marked as occupied') }}</span>
-			</li>
-			<li class="event-legend__item">
-				<div class="event-legend__demo event-legend__demo--free">
-					<span class="event-legend__demo-title">{{ t('calendar', 'Free') }}</span>
-				</div>
-				<span class="event-legend__label">{{ t('calendar', 'Free: your time is still available') }}</span>
-			</li>
-		</ul>
-
 		<!-- Participation status -->
 		<h3 class="event-legend__heading">
 			{{ t('calendar', 'Participation status') }}
@@ -36,31 +17,31 @@
 		<ul class="event-legend__list">
 			<li class="event-legend__item">
 				<div class="event-legend__demo event-legend__demo--accepted">
-					<span class="event-legend__demo-title">{{ t('calendar', 'Accepted') }}</span>
+					<span class="event-legend__demo-title">{{ t('calendar', 'Confirmed') }}</span>
 				</div>
-				<span class="event-legend__label">{{ t('calendar', 'Accepted: you confirmed your attendance') }}</span>
+				<span class="event-legend__label">{{ t('calendar', 'Confirmed: events taking place are shown in bold') }}</span>
 			</li>
 			<li class="event-legend__item">
 				<div class="event-legend__demo event-legend__demo--tentative">
-					<span class="event-legend__demo-title">{{ t('calendar', 'Tentative') }}</span>
+					<span class="event-legend__demo-title event-legend__demo-title--italic">{{ t('calendar', 'Tentative') }}</span>
 				</div>
 				<span class="event-legend__label">{{ t('calendar', 'Tentative: your participation is uncertain') }}</span>
 			</li>
 			<li class="event-legend__item">
 				<div class="event-legend__demo event-legend__demo--needs-action">
-					<span class="event-legend__demo-title">{{ t('calendar', 'Invited') }}</span>
+					<span class="event-legend__demo-title event-legend__demo-title--regular">{{ t('calendar', 'Invited') }}</span>
 				</div>
 				<span class="event-legend__label">{{ t('calendar', 'Invited: you have not yet responded to this invitation') }}</span>
 			</li>
 			<li class="event-legend__item">
 				<div class="event-legend__demo event-legend__demo--declined">
-					<span class="event-legend__demo-title event-legend__demo-title--strikethrough">{{ t('calendar', 'Declined') }}</span>
+					<span class="event-legend__demo-title event-legend__demo-title--regular event-legend__demo-title--strikethrough">{{ t('calendar', 'Declined') }}</span>
 				</div>
 				<span class="event-legend__label">{{ t('calendar', 'Declined: you declined this event') }}</span>
 			</li>
 			<li class="event-legend__item">
 				<div class="event-legend__demo event-legend__demo--all-declined">
-					<span class="event-legend__demo-title">
+					<span class="event-legend__demo-title event-legend__demo-title--regular event-legend__demo-title--strikethrough">
 						<!-- Warning triangle (Material Symbols) -->
 						<svg class="event-legend__icon" viewBox="0 -960 960 960" aria-hidden="true">
 							<path d="m40-120 440-760 440 760H40Zm440-120q17 0 28.5-11.5T520-280q0-17-11.5-28.5T480-320q-17 0-28.5 11.5T440-280q0 17 11.5 28.5T480-240Zm-40-120h80v-200h-80v200Z" />
@@ -72,11 +53,29 @@
 			</li>
 		</ul>
 
-		<!-- Icons -->
+		<!-- Indicators -->
 		<h3 class="event-legend__heading">
-			{{ t('calendar', 'Icons') }}
+			{{ t('calendar', 'Indicators') }}
 		</h3>
 		<ul class="event-legend__list">
+			<li class="event-legend__item">
+				<div class="event-legend__demo event-legend__demo--busy">
+					<span class="event-legend__demo-title">{{ t('calendar', 'Busy') }}</span>
+				</div>
+				<span class="event-legend__label">{{ t('calendar', 'Your time is marked as occupied') }}</span>
+			</li>
+			<li class="event-legend__item">
+				<div class="event-legend__demo event-legend__demo--free">
+					<span class="event-legend__demo-title">{{ t('calendar', 'Free') }}</span>
+				</div>
+				<span class="event-legend__label">{{ t('calendar', 'Your time is still available') }}</span>
+			</li>
+			<li class="event-legend__item">
+				<div class="event-legend__demo event-legend__demo--duration">
+					<span class="event-legend__demo-title">{{ t('calendar', 'Duration') }}</span>
+				</div>
+				<span class="event-legend__label">{{ t('calendar', 'The thin line above the title shows the duration of the event in relation to one day') }}</span>
+			</li>
 			<li class="event-legend__item">
 				<div class="event-legend__demo event-legend__demo--accepted">
 					<span class="event-legend__demo-title">
@@ -89,18 +88,11 @@
 				</div>
 				<span class="event-legend__label">{{ t('calendar', 'This event has one or more attendees') }}</span>
 			</li>
-		</ul>
-
-		<!-- Past events -->
-		<h3 class="event-legend__heading">
-			{{ t('calendar', 'Past events') }}
-		</h3>
-		<ul class="event-legend__list">
 			<li class="event-legend__item">
 				<div class="event-legend__demo event-legend__demo--past">
 					<span class="event-legend__demo-title">{{ t('calendar', 'Past event') }}</span>
 				</div>
-				<span class="event-legend__label">{{ t('calendar', 'Events that have already ended are shown with a more faded background') }}</span>
+				<span class="event-legend__label">{{ t('calendar', 'Events that have already ended keep their formatting and are shown in a lighter color') }}</span>
 			</li>
 		</ul>
 	</NcAppSettingsSection>
@@ -125,11 +117,13 @@ export default {
 
 <style lang="scss" scoped>
 $c: var(--color-primary-element);
+// Same lightening the grid applies to past events: lightness up in OKLab,
+// perceived hue untouched (see lightenColorForPastEvents)
+$c-past: oklch(from var(--color-primary-element) 83% min(c, 0.07) h);
 
-$bg-current: color-mix(in srgb, var(--color-primary-element) 35%, transparent);
-$bg-past:    color-mix(in srgb, var(--color-primary-element) 5%,  transparent);
-
-$border-w: var(--default-grid-baseline);
+// Thickness of the thin duration line; the vertical bar is four times as wide
+$line-w: calc(var(--default-grid-baseline) / 2);
+$border-w: calc(var(--default-grid-baseline) * 2);
 
 .event-legend {
 	&__intro {
@@ -164,11 +158,13 @@ $border-w: var(--default-grid-baseline);
 		font-size: var(--default-font-size);
 	}
 
+	// Events carry no fill and no frame: the vertical left bar (the demo
+	// default) marks busy time, square on all corners
 	&__demo {
 		flex-shrink: 0;
 		width: calc(var(--default-grid-baseline) * 30);
 		min-height: calc(var(--default-grid-baseline) * 7);
-		border-radius: var(--border-radius-small);
+		border-radius: 0;
 		padding-block: var(--default-grid-baseline);
 		padding-inline: calc(var(--default-grid-baseline) * 2);
 		display: flex;
@@ -183,13 +179,9 @@ $border-w: var(--default-grid-baseline);
 		border-inline-start: $border-w solid $c;
 		border-style: solid;
 
-		&--busy,
-		&--accepted {
-			background-color: $bg-current;
-		}
-
+		// Free: a hollow box instead of the solid bar, its frame as thick as
+		// the duration line
 		&--free {
-			background-color: $bg-current;
 			border-inline-start-color: transparent;
 
 			&::before {
@@ -198,43 +190,32 @@ $border-w: var(--default-grid-baseline);
 				inset-inline-start: calc(-1 * #{$border-w});
 				inset-block: 0;
 				width: $border-w;
-				background: var(--color-main-background);
-				border-inline-start: var(--border-width-input) solid $c;
-				border-inline-end: var(--border-width-input) solid $c;
-				border-start-start-radius: inherit;
-				border-end-start-radius: inherit;
+				border: $line-w solid $c;
 				box-sizing: border-box;
 			}
 		}
 
-		&--tentative {
-			--_stripe: color-mix(in srgb, var(--color-primary-element) 25%, transparent);
-			background-color: $bg-current;
-			background-image: repeating-linear-gradient(
-				45deg,
-				var(--_stripe),
-				var(--_stripe) 2px,
-				transparent 2px,
-				transparent 10px
-			);
-		}
-
-		&--needs-action,
-		&--declined,
-		&--all-declined {
-			background-color: transparent;
-			border-block-start: var(--border-width-input) solid $c;
-			border-block-end: var(--border-width-input) solid $c;
-			border-inline-end: var(--border-width-input) solid $c;
-			border-inline-start: $border-w solid $c;
-		}
-
+		// Past events keep their formatting; only the bar color is lighter
 		&--past {
-			background-color: $bg-past;
+			border-inline-start-color: $c-past;
+		}
+
+		// The thin line above the title shows the event's duration, docked
+		// to the vertical bar
+		&--duration::before {
+			content: '';
+			position: absolute;
+			inset-block-start: 0;
+			inset-inline-start: 0;
+			// Illustrative proportion: an event of about half a day
+			width: 50%;
+			border-block-start: $line-w solid $c;
 		}
 	}
 
 	&__demo-title {
+		// Confirmed events are emphasized; states that are not (yet) taking
+		// place use the regular modifier, tentative ones the italic one
 		font-weight: bold;
 		color: var(--color-main-text);
 		white-space: nowrap;
@@ -243,6 +224,14 @@ $border-w: var(--default-grid-baseline);
 		display: flex;
 		align-items: center;
 		gap: var(--default-grid-baseline);
+
+		&--regular {
+			font-weight: normal;
+		}
+
+		&--italic {
+			font-style: italic;
+		}
 
 		&--strikethrough {
 			text-decoration: line-through;

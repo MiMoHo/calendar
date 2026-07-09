@@ -11,8 +11,14 @@ import {
 	getHexForColorName,
 	hexToRGB,
 	isLight,
+	lightenColorForPastEvents,
 } from '../../utils/color.js'
+import { getLastCoveredDay } from '../../utils/date.js'
 import logger from '../../utils/logger.js'
+
+// The quantized duration classes cover up to a week (see fullcalendar.scss)
+const DURATION_CLASS_MAX_HOURS = 7 * 24
+
 /**
  * convert an array of calendar-objects to events
  *
@@ -21,9 +27,10 @@ import logger from '../../utils/logger.js'
  * @param {Date} start Start of time-range
  * @param {Date} end End of time-range
  * @param {Timezone} timezone Desired time-zone
+ * @param {string|null} viewType The fullcalendar view the events are rendered in
  * @return {object}[]
  */
-export function eventSourceFunction(calendarObjects, calendar, start, end, timezone) {
+export function eventSourceFunction(calendarObjects, calendar, start, end, timezone, viewType = null) {
 	const principalsStore = usePrincipalsStore()
 	const tasksStore = useTasksStore()
 	const settingsStore = useSettingsStore()
@@ -42,51 +49,6 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 		}
 		for (const object of allObjectsInTimeRange) {
 			const classNames = []
-			let didEveryoneDecline = false
-
-			// You are an organizer
-			if (object.getFirstPropertyFirstValue('ORGANIZER') === `mailto:${principalsStore.getCurrentUserPrincipalEmail}`) {
-				// Check if all the attendees have declined the event
-				if (object.hasProperty('ATTENDEE')) {
-					didEveryoneDecline = true
-					for (const attendeeProperty of object.getPropertyIterator('ATTENDEE')) {
-						const hasDeclined = attendeeProperty.participationStatus === 'DECLINED'
-						if (!hasDeclined) {
-							didEveryoneDecline = false
-						}
-					}
-					if (didEveryoneDecline) {
-						classNames.push('fc-event-nc-all-declined')
-					}
-				}
-			}
-
-			if (object.status === 'CANCELLED') {
-				classNames.push('fc-event-nc-cancelled')
-			} else if (object.status === 'TENTATIVE') {
-				classNames.push('fc-event-nc-tentative')
-			}
-
-			// You are invited
-			for (const attendeeProperty of object.getPropertyIterator('ATTENDEE')) {
-				if (attendeeProperty.email === `mailto:${principalsStore.getCurrentUserPrincipalEmail}`) {
-					if (attendeeProperty.participationStatus === 'DECLINED') {
-						classNames.push('fc-event-nc-declined')
-					} else if (attendeeProperty.participationStatus === 'TENTATIVE') {
-						classNames.push('fc-event-nc-tentative')
-					} else if (attendeeProperty.participationStatus === 'NEEDS-ACTION') {
-						classNames.push('fc-event-nc-needs-action')
-					}
-				}
-			}
-
-			if (object.hasComponent('VALARM')) {
-				classNames.push('fc-event-nc-alarms')
-			}
-
-			if (object.name === 'VEVENT' && object.getFirstPropertyFirstValue('TRANSP') === 'TRANSPARENT') {
-				classNames.push('fc-event-nc-free')
-			}
 
 			let jsStart, jsEnd
 			if (object.name === 'VEVENT') {
@@ -119,6 +81,92 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 			// adding one second to the end in that case.
 			if (jsStart && jsEnd && jsStart.getTime() === jsEnd.getTime()) {
 				jsEnd.setSeconds(jsEnd.getSeconds() + 1)
+			}
+
+			// Participation status is also applied to past events, so the status
+			// remains readable retrospectively. Past events only get a lighter
+			// color (see eventDidMount).
+
+			// You are an organizer
+			if (object.getFirstPropertyFirstValue('ORGANIZER') === `mailto:${principalsStore.getCurrentUserPrincipalEmail}`) {
+				// Check if all the attendees have declined the event
+				if (object.hasProperty('ATTENDEE')) {
+					let didEveryoneDecline = true
+					for (const attendeeProperty of object.getPropertyIterator('ATTENDEE')) {
+						const hasDeclined = attendeeProperty.participationStatus === 'DECLINED'
+						if (!hasDeclined) {
+							didEveryoneDecline = false
+						}
+					}
+					if (didEveryoneDecline) {
+						classNames.push('fc-event-nc-all-declined')
+					}
+				}
+			}
+
+			if (object.status === 'TENTATIVE') {
+				classNames.push('fc-event-nc-tentative')
+			}
+
+			// You are invited
+			for (const attendeeProperty of object.getPropertyIterator('ATTENDEE')) {
+				if (attendeeProperty.email === `mailto:${principalsStore.getCurrentUserPrincipalEmail}`) {
+					if (attendeeProperty.participationStatus === 'DECLINED') {
+						classNames.push('fc-event-nc-declined')
+					} else if (attendeeProperty.participationStatus === 'TENTATIVE') {
+						classNames.push('fc-event-nc-tentative')
+					} else if (attendeeProperty.participationStatus === 'NEEDS-ACTION') {
+						classNames.push('fc-event-nc-needs-action')
+					}
+				}
+			}
+
+			if (object.status === 'CANCELLED') {
+				classNames.push('fc-event-nc-cancelled')
+			}
+
+			if (object.hasComponent('VALARM')) {
+				classNames.push('fc-event-nc-alarms')
+			}
+
+			if (object.name === 'VEVENT' && object.getFirstPropertyFirstValue('TRANSP') === 'TRANSPARENT') {
+				classNames.push('fc-event-nc-free')
+			}
+
+			if (object.name === 'VEVENT' && jsStart && jsEnd) {
+				// The event's duration travels as a quantized class so pure
+				// CSS can size the duration line above the title (anything
+				// applied to the element outside the event definition is
+				// dropped on in-place re-renders)
+				const durationHours = Math.min(
+					DURATION_CLASS_MAX_HOURS,
+					Math.max(1, Math.round((jsEnd.getTime() - jsStart.getTime()) / (60 * 60 * 1000))),
+				)
+				classNames.push('fc-event-nc-has-duration', `fc-event-nc-duration-${durationHours}`)
+
+				// Events crossing into other days stretch the duration line
+				// to their end instead: it runs to the proportional position
+				// of the end time within the last day (see the
+				// fc-event-nc-ends-* rules in the CSS)
+				const startDay = new Date(jsStart)
+				startDay.setHours(0, 0, 0, 0)
+				const lastDay = getLastCoveredDay(jsEnd)
+				if (lastDay.getTime() > startDay.getTime()) {
+					classNames.push('fc-event-nc-spans-days')
+					const endHour = Math.round((jsEnd.getTime() - lastDay.getTime()) / (60 * 60 * 1000))
+					if (endHour > 0 && endHour < 24) {
+						classNames.push(`fc-event-nc-ends-${endHour}`)
+					}
+				}
+
+				if (!object.isAllDay()) {
+					// Stacking in the week/day grids follows the start time:
+					// later events paint above the title and description text
+					// flowing out of earlier ones (see the fc-event-nc-starts-*
+					// rules in the CSS)
+					const startSlot = Math.min(47, Math.floor((jsStart.getHours() * 60 + jsStart.getMinutes()) / 30))
+					classNames.push(`fc-event-nc-starts-${startSlot}`)
+				}
 			}
 
 			if (object.name === 'VTODO') {
@@ -187,6 +235,18 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 					fcEvent.borderColor = customColor
 				}
 			}
+
+			// Past events keep their formatting; only their color anchor (bar,
+			// dot, left border) is lightened, preserving hue and saturation.
+			// The lightened color is part of the event definition so it
+			// survives fullcalendar re-rendering the event element in place,
+			// which drops anything applied to the element after the fact.
+			if (jsEnd && jsEnd.getTime() < Date.now()) {
+				const lightened = lightenColorForPastEvents(fcEvent.borderColor ?? calendar.color)
+				if (lightened) {
+					fcEvent.borderColor = lightened
+				}
+			}
 			if (searchTerms.length > 0) {
 				const organizerProperty = object.getFirstProperty('ORGANIZER')
 				const organizerText = organizerProperty
@@ -205,9 +265,73 @@ export function eventSourceFunction(calendarObjects, calendar, start, end, timez
 			if (object.name === 'VTODO' && object.endDate === null && object.percent !== 100 && object.status !== 'COMPLETED') {
 				fcEvent.create = true
 				tasksStore.appendTask(calendar.id, fcEvent)
-			} else {
-				fcEvents.push(fcEvent)
+				continue
 			}
+
+			// In the week and day grids, timed events spanning three or more
+			// calendar days do not occupy all time slots of the days in
+			// between. They are split into the timed start and end parts plus
+			// an all-day "bridge" for the days in between, which renders
+			// unobtrusively in the all-day row. All parts belong to the same
+			// event: they share its object id, so opening any of them edits
+			// the event as a whole.
+			const isTimeGridView = typeof viewType === 'string' && viewType.startsWith('timeGrid')
+			let spansThreeOrMoreDays = false
+			if (object.name === 'VEVENT' && !object.isAllDay() && jsStart && jsEnd) {
+				const startMidnight = new Date(jsStart)
+				startMidnight.setHours(0, 0, 0, 0)
+				spansThreeOrMoreDays = getLastCoveredDay(jsEnd).getTime() - startMidnight.getTime()
+					>= 2 * 24 * 60 * 60 * 1000
+			}
+
+			if (isTimeGridView && spansThreeOrMoreDays) {
+				const secondDayStart = new Date(jsStart)
+				secondDayStart.setHours(0, 0, 0, 0)
+				secondDayStart.setDate(secondDayStart.getDate() + 1)
+				const lastDayStart = getLastCoveredDay(jsEnd)
+
+				// The parts show the real event times instead of their own
+				const extendedProps = {
+					...fcEvent.extendedProps,
+					realStart: jsStart,
+					realEnd: jsEnd,
+				}
+
+				fcEvents.push({
+					...fcEvent,
+					id: `${fcEvent.id}-start`,
+					end: secondDayStart,
+					extendedProps,
+				}, {
+					...fcEvent,
+					id: `${fcEvent.id}-bridge`,
+					allDay: true,
+					start: secondDayStart,
+					end: new Date(lastDayStart),
+					startEditable: false,
+					durationEditable: false,
+					// The bridge ends at a day boundary, so it must not carry
+					// the proportional end-time position of the whole event
+					classNames: [
+						...classNames.filter((name) => !name.startsWith('fc-event-nc-ends-')),
+						'fc-event-nc-bridge',
+					],
+					extendedProps,
+				}, {
+					...fcEvent,
+					id: `${fcEvent.id}-end`,
+					start: new Date(lastDayStart),
+					// The end part starts at midnight, not at the event start
+					classNames: [
+						...classNames.filter((name) => !name.startsWith('fc-event-nc-starts-')),
+						'fc-event-nc-starts-0',
+					],
+					extendedProps,
+				})
+				continue
+			}
+
+			fcEvents.push(fcEvent)
 		}
 		tasksStore.finishCalendar(calendar.id)
 	}

@@ -2,6 +2,7 @@
  * SPDX-FileCopyrightText: 2020 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+@use 'sass:math';
 
 /** Override some FullCalendar CSS vars: */
 .fc {
@@ -11,7 +12,10 @@
 	--fc-neutral-text-color: var(--color-text-lighter) !important;
 	--fc-border-color: var(--color-border) !important;
 
-	--fc-daygrid-event-dot-width: 10px !important;
+	// Thickness of the thin duration line above event titles; the vertical
+	// busy/free bar is four times as wide. All views share these values.
+	--nc-duration-line-width: calc(var(--default-grid-baseline) / 2);
+	--fc-daygrid-event-dot-width: calc(var(--nc-duration-line-width) * 4) !important;
 
 	--fc-event-bg-color: var(--color-primary-element);
 	--fc-event-border-color: var(--color-primary-element);
@@ -88,6 +92,72 @@
 	}
 }
 
+// List view: every row is marked by a vertical bar instead of a dot,
+// indicating busy time; free (TRANSP:TRANSPARENT) events hollow it out.
+.fc-event.fc-list-event {
+	.fc-list-event-dot {
+		display: block;
+		width: 0;
+		height: 1lh;
+		border-width: 0;
+		border-inline-start-width: var(--fc-daygrid-event-dot-width);
+		border-radius: 0;
+	}
+
+	&.fc-event-nc-free .fc-list-event-dot {
+		width: var(--fc-daygrid-event-dot-width);
+		border-width: var(--nc-duration-line-width);
+		background: transparent;
+		box-sizing: border-box;
+	}
+}
+
+// Year view: up to three events fit into the cells (their height leaves
+// room for three compact rows); more collapse into one outlined counter
+// box. Times and second title lines are dropped entirely for lack of
+// space; everything renders in a narrow typeface. The vertical bars are
+// slimmer, the duration line finer, and stacked events get a small gap so
+// their bars stay distinguishable.
+.fc-multimonth {
+	// The narrow typeface applies to the events only; day numbers, month
+	// titles and weekday names keep the regular face
+	.fc-event {
+		font-family: 'Avenir Next Condensed', 'Arial Narrow', 'Liberation Sans Narrow', sans-serif;
+		font-stretch: condensed;
+	}
+
+	.fc-daygrid-more-link {
+		display: inline-block;
+		border: var(--border-width-input) solid var(--color-border-maxcontrast);
+		border-radius: var(--border-radius-small);
+		padding-inline: var(--default-grid-baseline);
+		line-height: normal;
+		color: var(--color-main-text);
+	}
+
+	.fc-event-time {
+		display: none;
+	}
+
+	.fc-event.fc-daygrid-block-event {
+		--fc-daygrid-event-dot-width: calc(var(--default-grid-baseline) * 1.5) !important;
+
+		// Compact rows so three events fit into one day cell
+		font-size: calc(var(--default-font-size) * 0.8);
+		line-height: 1.15;
+		margin-block-end: 1px;
+
+		&::before {
+			border-block-start-width: 1px;
+		}
+
+		.fc-event-title {
+			display: block;
+			white-space: nowrap;
+		}
+	}
+}
+
 // Fix list table
 .fc-list-table td {
 	white-space: normal;
@@ -126,71 +196,304 @@
 	}
 }
 
+// The preview of a new event (fullcalendar's selection mirror and the
+// unsaved event) follows the calendar currently selected in the editor.
+// The editor publishes the color as a custom property on <body>, so the
+// preview recolors immediately when the user picks another calendar.
+.fc .fc-event.fc-event-mirror,
+.fc .fc-event[data-is-new='yes'] {
+	border-color: var(--nc-editor-calendar-color, var(--color-primary-element)) !important;
+}
+
+.fc .fc-highlight {
+	background: color-mix(in srgb, var(--nc-editor-calendar-color, var(--color-primary-element)) 20%, transparent);
+}
+
 // ### FullCalendar Event adjustments
 .fc-event {
 	padding-inline-start: 3px;
 
-	// Only show the left border, thick and full-opacity (dot events and list events are excluded)
-	&:not(.fc-daygrid-dot-event):not(.fc-list-event) {
+	// Only show the left border, thick and full-opacity (list rows style it
+	// themselves). It indicates busy time; free events hollow it out below.
+	&:not(.fc-list-event) {
 		border-block-start-width: 0 !important;
 		border-block-end-width: 0 !important;
 		border-inline-end-width: 0 !important;
-		border-inline-start-width: calc(var(--default-grid-baseline) + var(--default-grid-baseline) * 0.5) !important;
+		border-inline-start-width: var(--fc-daygrid-event-dot-width) !important;
 		border-inline-start-style: solid !important;
 	}
 
-	// Free (TRANSP:TRANSPARENT) events: hollow left strip — 1px accent | page-bg | 1px accent
+	// Free (TRANSP:TRANSPARENT) events: instead of the solid busy bar, a
+	// hollow box whose frame is as thick as the duration line
 	&.fc-event-nc-free {
-		&:not(.fc-daygrid-dot-event):not(.fc-list-event) {
-			&:not(.fc-timegrid-event) {
-				position: relative;
-			}
-			// Hide the solid left border; the ::before pseudo-element takes its place
+		&:not(.fc-list-event) {
+			// Hide the solid left border; the ::after pseudo-element takes its place
 			border-inline-start-color: transparent !important;
 
-			&::before {
+			&::after {
 				content: '';
 				position: absolute;
 				// Offset into the (transparent) border area so we start at the true left edge
-				inset-inline-start: calc(-1 * var(--default-grid-baseline));
+				inset-inline-start: calc(-1 * var(--fc-daygrid-event-dot-width));
 				top: 0;
 				bottom: 0;
-				width: var(--default-grid-baseline);
+				width: var(--fc-daygrid-event-dot-width);
 				background: var(--fc-page-bg-color);
-				border-inline-start: 1px solid var(--nc-event-color, currentColor);
-				border-inline-end: 1px solid var(--nc-event-color, currentColor);
-				border-start-start-radius: inherit;
-				border-end-start-radius: inherit;
+				border: var(--nc-duration-line-width) solid var(--nc-event-color, currentColor);
 				box-sizing: border-box;
+				// Above fullcalendar's .fc-event-main (z-index 2), so the
+				// timegrid frame background stretched over the bar column
+				// does not cover the hollow box
+				z-index: 2;
 			}
 		}
 	}
 
 	&.fc-event-nc-task-completed,
-	&.fc-event-nc-cancelled {
+	&.fc-event-nc-cancelled,
+	&.fc-event-nc-declined,
+	&.fc-event-nc-all-declined {
 		.fc-event-title,
 		.fc-list-event-title {
 			text-decoration: line-through !important;
 		}
 	}
 
+	// Week/day grid events are harmonized with the month grid: the vertical
+	// bar marks busy time, the body carries no fill look. Titles sit below
+	// the time (also for short events) with the description in smaller
+	// letters below; both may flow into the free slots below the event
+	// until the next event blocks them - the opaque page background (which
+	// looks identical to no fill) does the blocking. The bar stays limited
+	// to the event's time. Timed events spanning three or more days are
+	// split in these views (see eventSourceFunction), so the days in
+	// between only show an all-day bridge instead of fully occupied
+	// columns.
+	&.fc-timegrid-event {
+		border-radius: 0;
+		overflow: visible;
+		background-color: var(--fc-page-bg-color) !important;
+		background-image: none !important;
+		// fullcalendar draws a 1px page-bg halo around timegrid events and
+		// lets their box touch the slot boundaries; both paint over the hour
+		// lines of the grid. Drop the halo and inset the box by the half of
+		// the line lying inside the event's range (the collapsed table
+		// borders center on the slot boundaries), so events starting or
+		// ending on the hour begin flush under the line marking their start
+		// and leave the line at their end visible.
+		box-shadow: none;
 
-	// Participation-state events with no fill keep the thick left stripe plus a 1px frame.
-	&.fc-event-nc-all-declined,
-	&.fc-event-nc-needs-action,
-	&.fc-event-nc-declined {
-		&:not(.fc-daygrid-dot-event):not(.fc-list-event) {
-			background-color: transparent !important;
-			border-block-start-width: 1px !important;
-			border-block-end-width: 1px !important;
-			border-inline-end-width: 1px !important;
-			border-inline-start-width: calc(var(--default-grid-baseline) + var(--default-grid-baseline) * 0.5) !important;
+		&.fc-event-start {
+			top: 0.5px;
+		}
+
+		&.fc-event-end {
+			bottom: 0.5px;
+		}
+
+		.fc-event-main {
+			overflow: visible;
+		}
+
+		// Narrow side-by-side columns: the time wraps into a second line
+		// instead of being cut off
+		.fc-event-time {
+			white-space: normal;
+		}
+
+		// The grid must not show through between the bar and the text while
+		// the text flows below the event box. The frame is the only element
+		// tracking the real content height, so its background is stretched
+		// over the gap: the transparent border keeps the text in place while
+		// the background paints under it (border-box clip). The covered
+		// distance is the bar plus the two paddings between the bar and the
+		// frame (3px on .fc-event above, 1px on fullcalendar's main).
+		.fc-event-main-frame {
+			margin-inline-start: calc(-1 * (var(--fc-daygrid-event-dot-width) + 3px + 1px));
+			border-inline-start: calc(var(--fc-daygrid-event-dot-width) + 3px + 1px) solid transparent;
+		}
+
+		// The stretched frame also paints over the bar (the base left
+		// border) inside the event box, so the bar is redrawn on top with
+		// the exact geometry of the free events' hollow box: anchored to
+		// the event box, colored by the definition through the inherit
+		// chain - safe against in-place re-renders
+		&:not(.fc-event-nc-free)::after {
+			content: '';
+			position: absolute;
+			inset-inline-start: calc(-1 * var(--fc-daygrid-event-dot-width));
+			top: 0;
+			bottom: 0;
+			width: 0;
+			border-inline-start: var(--fc-daygrid-event-dot-width) solid;
+			border-color: inherit;
+			// fullcalendar's .fc-event-main sits at z-index 2; the bar is the
+			// later sibling on the same level, so it paints above the
+			// stretched frame background
+			z-index: 2;
+			pointer-events: none;
+		}
+
+		// The title and description flowing into the free slots below the
+		// event mask the grid lines behind them, like the event box itself
+		.fc-event-main,
+		.fc-event-main-frame {
+			background-color: inherit;
+		}
+
+		// Title below the time, also for short events (fullcalendar hides
+		// their overflow, which cut the title sitting on the second line).
+		// Time, title and description keep their natural height instead of
+		// being squeezed into the event box, so they flow into the free
+		// slots below. The content stacks from the top: fullcalendar
+		// stretches the frame over the whole box and grows the title
+		// container, which would push the description to the box's bottom.
+		.fc-event-main-frame {
+			flex-direction: column;
+			overflow: visible;
+			height: auto;
+
+			> * {
+				flex: 0 0 auto;
+			}
+		}
+
+		// Long links must not poke into the neighbouring columns; every
+		// text line is exactly one slot high (1.5em), so any height cap
+		// cuts between lines instead of through them. The title shows at
+		// most two lines.
+		// One text line is exactly one slot (1.5em at the grid font; the
+		// event font is 0.875 of it), so height caps always cut between
+		// lines and the line budgets map onto free slots
+		.fc-event-title,
+		.fc-event-nc-description,
+		.fc-event-time {
+			overflow-wrap: anywhere;
+			line-height: calc(1.5em / 0.875);
+		}
+
+		.fc-event-title {
+			/* stylelint-disable-next-line value-no-vendor-prefix */
+			display: -webkit-box;
+			-webkit-line-clamp: 2;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+		}
+
+		.fc-event-nc-description {
+			// Relative to the smaller description font, one slot per line
+			line-height: calc(1.5em / 0.875 / 0.8);
+		}
+
+		// fullcalendar appends a dash after the time of short events,
+		// expecting an inline title next to it, and hides their title
+		// entirely; the title always renders below the time instead
+		.fc-event-time::after {
+			content: none;
+		}
+
+		.fc-event-title {
+			display: block;
+			// fullcalendar also shrinks short events' titles to the small
+			// font size; all titles share the regular size instead
+			font-size: 1em;
+		}
+
+		.fc-event-title,
+		.fc-event-time {
+			color: var(--color-main-text) !important;
+		}
+
+		.fc-event-nc-description {
+			font-size: 0.8em;
+			white-space: normal;
+			color: var(--color-main-text);
 		}
 	}
 
-	.fc-event-title {
+	// Participation status is expressed through text formatting alone:
+	// confirmed events are bold (the default, including accepted
+	// invitations), tentative ones bold italic, unanswered, declined and
+	// cancelled ones regular (declined and cancelled ones additionally
+	// struck through above). The bold default lives in the .fc-event-title
+	// base rule below; list rows use their own title class.
+	&.fc-event-nc-tentative {
+		.fc-event-title,
+		.fc-list-event-title {
+			font-style: italic;
+		}
+	}
+
+	&.fc-event-nc-all-declined,
+	&.fc-event-nc-needs-action,
+	&.fc-event-nc-declined,
+	&.fc-event-nc-cancelled {
+		.fc-event-title,
+		.fc-list-event-title {
+			font-weight: normal;
+		}
+	}
+
+	// Tasks are no appointments and keep the regular element weight
+	&.fc-event-nc-task {
+		.fc-event-title,
+		.fc-list-event-title {
+			font-weight: var(--font-weight-element);
+		}
+	}
+
+	// fullcalendar only gives segments containing the event start a 2px
+	// inline margin; give continuation segments the same one so the bars of
+	// all banner events line up
+	&.fc-daygrid-block-event:not(.fc-event-start) {
+		margin-inline-start: 2px;
+	}
+
+	// Day grid events: no fill, no frame, square corners. The vertical left
+	// bar (the base left border) marks busy time; the thin bar above the
+	// title (::before, sized by the fc-event-nc-duration-* classes) shows the
+	// event's duration relative to the width of one day cell.
+	// Everything here builds on event-definition classes and definition
+	// colors, because in-place re-renders after clicking or dragging drop
+	// anything added to the element afterwards.
+	&.fc-daygrid-block-event {
+		border-radius: 0;
+		position: relative;
+		padding-inline-start: var(--default-grid-baseline);
+		background-color: transparent !important;
+		background-image: none !important;
+
+		.fc-event-title,
+		.fc-event-time {
+			color: var(--color-main-text) !important;
+		}
+
+		// The time must not be squeezed by long titles
+		.fc-event-time {
+			flex-shrink: 0;
+		}
+
+		&:hover {
+			background-color: var(--color-background-hover) !important;
+		}
+	}
+
+	.fc-event-title,
+	.fc-list-event-title {
 		text-overflow: ellipsis;
-		font-weight: var(--font-weight-element);
+		font-weight: bold;
+	}
+
+	// Long titles in the day grid wrap into a second line, flush under the
+	// beginning of the title, instead of being ellipsized immediately
+	&.fc-daygrid-block-event {
+		.fc-event-title {
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			-webkit-line-clamp: 2;
+			overflow: hidden;
+			white-space: normal;
+		}
 	}
 
 	// Reminder icon on events with alarms set
@@ -281,13 +584,137 @@
 	margin: 0 !important;
 }
 
-.fc-v-event {
-	&.fc-timegrid-event-short {
-		min-height: 2em;
+// Events carry an opaque page background (see above); on the tinted today
+// column they take on the tint instead, so the column still reads as one
+.fc-timegrid-col.fc-day-today .fc-event.fc-timegrid-event {
+	background-color: var(--color-primary-element-light) !important;
+}
+
+// Stacking in the week/day grids follows the start time (fullcalendar
+// orders the column segments by duration): later events paint above the
+// title and description text flowing out of earlier ones, so the next
+// event blocks it. Segments continuing from a previous day stack at the
+// bottom like the midnight start they represent.
+.fc-timeGridWeek-view,
+.fc-timeGridDay-view {
+	@for $slot from 0 through 47 {
+		.fc-timegrid-event-harness:has(> .fc-event-nc-starts-#{$slot}) {
+			z-index: #{$slot + 2} !important;
+		}
 	}
 
-	.fc-event-title {
-		white-space: initial;
+	.fc-timegrid-event-harness:has(> .fc-timegrid-event:not(.fc-event-start)) {
+		z-index: 2 !important;
+	}
+}
+
+.fc-v-event .fc-event-title {
+	white-space: initial;
+}
+
+// Title and description flowing out of a timegrid event stop one slot
+// short of the next timed event of the same calendar: the quantized
+// fc-event-nc-flow-* class carries the free slots between them, and one
+// slot is 1.5em in fullcalendar's timegrid. Without the class no event
+// follows, so the text may use the space below freely. Events running
+// parallel to others (fc-event-nc-overlapping) keep their text inside
+// their own box entirely: fullcalendar hands the earlier events of an
+// overlap group the full column width, so flowing text would visibly
+// cross the neighbouring events' columns.
+.fc-timeGridWeek-view,
+.fc-timeGridDay-view {
+	@for $slots from 0 through 32 {
+		$overhang: max($slots - 1, 0);
+
+		.fc-event-nc-flow-#{$slots}.fc-timegrid-event .fc-event-main-frame {
+			overflow: hidden;
+			max-height: calc(100% + #{math.div($overhang * 1.5, 0.875)}em);
+		}
+	}
+
+	// The description is clamped to the lines that fit into the box plus
+	// the allowed flow, with a real ellipsis on the last line when the
+	// text goes on (fc-event-nc-desc-lines-*, computed per event)
+	@for $lines from 0 through 40 {
+		.fc-event-nc-desc-lines-#{$lines} .fc-event-nc-description {
+			/* stylelint-disable-next-line value-no-vendor-prefix */
+			display: -webkit-box;
+			-webkit-line-clamp: #{max($lines, 1)};
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+
+			@if $lines == 0 {
+				display: none;
+			}
+		}
+	}
+}
+
+// The thin line above the title shows the event's duration, docked to the
+// vertical bar, for all event lengths: a one-hour meeting shows a short
+// stub relative to the width of one day cell, an all-day event exactly one
+// day width. Events crossing into other days stretch the line to the
+// proportional position of their end time within the last day instead
+// (fc-event-nc-spans-days + fc-event-nc-ends-*), so it visibly continues
+// across the days in between. The duration comes from the event definition
+// (fc-event-nc-duration-*, quantized to hours up to one week) and the day
+// width is derived from the day-grid body width in container query units.
+// The same rules cover the month grid, the all-day row of the week and day
+// grids and the year grid (with a finer line there).
+.fc-dayGridMonth-view .fc-daygrid-body,
+.fc-timeGridWeek-view .fc-daygrid-body,
+.fc-timeGridDay-view .fc-daygrid-body,
+.fc-multimonth .fc-daygrid-body {
+	container-type: inline-size;
+}
+
+.fc-dayGridMonth-view,
+.fc-timeGridWeek-view,
+.fc-multimonth {
+	--nc-day-width: calc(100cqw / 7);
+}
+
+.fc-timeGridDay-view {
+	--nc-day-width: 100cqw;
+}
+
+.fc-dayGridMonth-view,
+.fc-timeGridWeek-view,
+.fc-timeGridDay-view,
+.fc-multimonth {
+	@for $hours from 1 through 168 {
+		.fc-event-nc-duration-#{$hours} {
+			--nc-duration-width: calc(#{$hours} * var(--nc-day-width) / 24);
+		}
+	}
+
+	@for $hour from 1 through 23 {
+		.fc-event-nc-ends-#{$hour}.fc-event-end {
+			--nc-end-offset: calc((24 - #{$hour}) * var(--nc-day-width) / 24);
+		}
+	}
+
+	.fc-event.fc-event-nc-has-duration.fc-daygrid-block-event::before {
+		content: '';
+		display: block;
+		// Dock the line to the vertical bar instead of the padded content edge
+		margin-inline-start: calc(-1 * var(--default-grid-baseline));
+		// The docking shifts the line one grid baseline to the left, so the
+		// width cap compensates for it: a line covering the whole day ends at
+		// the same distance from the right cell edge as the bar keeps from
+		// the left one
+		max-width: calc(100% + var(--default-grid-baseline));
+		width: var(--nc-duration-width, 100%);
+		border-block-start: var(--nc-duration-line-width) solid;
+		border-color: inherit;
+	}
+
+	// Events crossing into other days: the line runs from the segment start
+	// to the end time's position within the last day (full width on
+	// continuation segments that do not contain the event's end), again
+	// compensating the docking shift
+	.fc-event.fc-event-nc-spans-days.fc-daygrid-block-event::before {
+		width: calc(100% + var(--default-grid-baseline) - var(--nc-end-offset, 0px));
 	}
 }
 
@@ -331,21 +758,13 @@
 	margin-bottom: 0;
 }
 
-// Leave some space for dragging
+// Events span the full column width: the former 1vw/2vw drag gutters let
+// the grid poke out to the right of every event and squeezed overlapping
+// events until their time labels clipped. New events can still be dragged
+// out on the free slots.
 .fc-timeGridDay-view, .fc-timeGridWeek-view {
-	.fc-event {
-		margin-inline-end: 1vw;
-	}
-
 	.fc-event-mirror {
 		border: none !important;
-	}
-
-}
-
-.fc-timeGridDay-view {
-	.fc-event {
-		margin-inline-end: 2vw;
 	}
 }
 
@@ -357,14 +776,11 @@
 //      data-themes="light-highcontrast" (or dark-highcontrast) on <body>
 //      without necessarily setting the OS media feature.
 @mixin _fc-high-contrast-events {
-	.fc-event:not(.fc-daygrid-dot-event):not(.fc-list-event) {
-		background-color: var(--fc-page-bg-color) !important;
+	// The subtle multi-day gradients are too faint for high contrast;
+	// the solid duration indicators carry the information on their own
+	.fc-event {
 		background-image: none !important;
-
-		.fc-event-title,
-		.fc-event-time {
-			color: var(--color-main-text) !important;
-		}
+		background-color: var(--fc-page-bg-color) !important;
 	}
 }
 

@@ -9,6 +9,7 @@ import {
 	getDateFromFirstdayParam,
 	getYYYYMMDDFromFirstdayParam,
 	getDateFromDateTimeValue,
+	getLastCoveredDay,
 	modifyDate
 } from '../../../../src/utils/date.js'
 import logger from '../../../../src/utils/logger.js'
@@ -19,7 +20,6 @@ describe('utils/alarms test suite', () => {
 	beforeEach(() => {
 		logger.error.mockClear()
 	})
-
 
 	it('should return a date', () => {
 		expect(dateFactory()).toBeInstanceOf(Date)
@@ -143,4 +143,23 @@ describe('utils/alarms test suite', () => {
 		expect(date7.getMonth()).toEqual(3)
 		expect(date7.getDate()).toEqual(13)
 	})
+
+	it('should get the last covered day of an event ending during a day', () => {
+		const lastDay = getLastCoveredDay(new Date(2019, 0, 2, 14, 30, 0))
+
+		expect(lastDay.getFullYear()).toEqual(2019)
+		expect(lastDay.getMonth()).toEqual(0)
+		expect(lastDay.getDate()).toEqual(2)
+		expect(lastDay.getHours()).toEqual(0)
+		expect(lastDay.getMinutes()).toEqual(0)
+	})
+
+	it('should not count the following day for an event ending exactly at midnight', () => {
+		const lastDay = getLastCoveredDay(new Date(2019, 0, 2, 0, 0, 0))
+
+		expect(lastDay.getFullYear()).toEqual(2019)
+		expect(lastDay.getMonth()).toEqual(0)
+		expect(lastDay.getDate()).toEqual(1)
+	})
+
 })

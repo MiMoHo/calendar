@@ -68,3 +68,11 @@ globalThis.OC = {
 		version: '34.0.0',
 	},
 }
+
+// jsdom does not implement window.matchMedia
+window.matchMedia = window.matchMedia ?? ((media) => ({
+	matches: false,
+	media,
+	addEventListener: () => {},
+	removeEventListener: () => {},
+}))

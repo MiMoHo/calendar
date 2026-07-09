@@ -5,6 +5,7 @@
 import { eventSourceFunction } from '../../../../../src/fullcalendar/eventSources/eventSourceFunction.js'
 import {
 	hexToRGB,
+	lightenColorForPastEvents,
 	isLight,
 	generateTextColorForHex,
 	getHexForColorName,
@@ -12,6 +13,7 @@ import {
 import { translate } from '@nextcloud/l10n'
 import {getAllObjectsInTimeRange} from "../../../../../src/utils/calendarObject.js";
 import { createPinia, setActivePinia } from 'pinia'
+import usePrincipalsStore from '../../../../../src/store/principals.js'
 import useSettingsStore from '../../../../../src/store/settings.js'
 vi.mock('@nextcloud/l10n')
 vi.mock('../../../../../src/utils/color.js')
@@ -203,7 +205,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: false,
 				start: event11Start,
 				end: event11End,
-				classNames: [],
+				classNames: [ 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-starts-20' ],
 				extendedProps: {
 					objectId: '1',
 					vobjectId: '1-1',
@@ -227,7 +229,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: false,
 				start: event12Start,
 				end: event12End,
-				classNames: [ 'fc-event-nc-cancelled' ],
+				classNames: [ 'fc-event-nc-cancelled', 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-starts-20' ],
 				extendedProps: {
 					objectId: '1',
 					recurrenceId: 456,
@@ -251,7 +253,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: false,
 				start: event13Start,
 				end: event13End,
-				classNames: [ 'fc-event-nc-tentative', 'fc-event-nc-alarms' ],
+				classNames: [ 'fc-event-nc-tentative', 'fc-event-nc-alarms', 'fc-event-nc-has-duration', 'fc-event-nc-duration-5', 'fc-event-nc-starts-20' ],
 				extendedProps: {
 					objectId: '1',
 					recurrenceId: 789,
@@ -275,7 +277,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: true,
 				start: event21Start,
 				end: event21End,
-				classNames: [],
+				classNames: [ 'fc-event-nc-has-duration', 'fc-event-nc-duration-24' ],
 				extendedProps: {
 					objectId: '2',
 					recurrenceId: 101,
@@ -299,7 +301,7 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 				allDay: false,
 				start: event31Start,
 				end: event31End,
-				classNames: [],
+				classNames: [ 'fc-event-nc-has-duration', 'fc-event-nc-duration-1', 'fc-event-nc-starts-20' ],
 				extendedProps: {
 					objectId: '4',
 					recurrenceId: 303,
@@ -876,6 +878,216 @@ describe('fullcalendar/freeBusyResourceEventSourceFunction test suite', () => {
 		getAllObjectsInTimeRange.mockReturnValueOnce([eventA, eventB, eventC])
 		result = eventSourceFunction(calendarObjects, calendar, start, end, timezone)
 		expect(result).toHaveLength(3)
+	})
+
+	it('should add participation and duration classes for upcoming and past events', () => {
+		translate.mockImplementation((app, str) => str)
+		getHexForColorName.mockImplementation(() => null)
+		isLight.mockImplementation(() => false)
+		lightenColorForPastEvents.mockImplementation(() => '#99DAF2')
+
+		const principalsStore = usePrincipalsStore()
+		principalsStore.principalsById = {
+			'principal/user': { emailAddress: 'user@example.com' },
+		}
+		principalsStore.currentUserPrincipal = 'principal/user'
+
+		/**
+		 * Build a minimal VEVENT mock
+		 *
+		 * @param {object} props Overrides and event times
+		 * @return {object} The event component mock
+		 */
+		const buildEvent = ({ id, start, end, allDay = false, attendees = [], status = undefined }) => ({
+			name: 'VEVENT',
+			id,
+			status,
+			isAllDay: vi.fn().mockReturnValue(allDay),
+			getReferenceRecurrenceId: vi.fn().mockReturnValue({ unixTime: 123 }),
+			canModifyAllDay: vi.fn().mockReturnValue(false),
+			startDate: {
+				getInTimezone: vi.fn().mockReturnValue({ jsDate: start }),
+			},
+			endDate: {
+				getInTimezone: vi.fn().mockReturnValue({ jsDate: end }),
+			},
+			hasComponent: vi.fn().mockReturnValue(false),
+			hasProperty: vi.fn().mockImplementation((name) => name === 'ATTENDEE' && attendees.length > 0),
+			getFirstPropertyFirstValue: vi.fn().mockImplementation((name) => {
+				if (name === 'ORGANIZER') {
+					return attendees.length > 0 ? 'mailto:user@example.com' : null
+				}
+				return null
+			}),
+			getPropertyIterator: vi.fn().mockImplementation(function* (name) {
+				if (name === 'ATTENDEE') {
+					yield* attendees
+				}
+			}),
+		})
+
+		// Fixed times of day keep the quantized fc-event-nc-ends-* class
+		// deterministic regardless of when the tests run
+		const dayRelativeAt = (days, hour) => {
+			const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+			date.setHours(hour, 0, 0, 0)
+			return date
+		}
+		const inOneDay = dayRelativeAt(1, 18)
+		const inTwoDays = dayRelativeAt(2, 6)
+		const inFourDays = dayRelativeAt(4, 6)
+		const oneDayAgo = dayRelativeAt(-2, 6)
+		const twoDaysAgo = dayRelativeAt(-3, 18)
+
+		const upcomingAllDeclined = buildEvent({
+			id: 'future-all-declined',
+			start: inOneDay,
+			end: inTwoDays,
+			attendees: [
+				{ email: 'mailto:someone@example.com', participationStatus: 'DECLINED' },
+			],
+		})
+		const upcomingTentativeStatus = buildEvent({
+			id: 'future-tentative',
+			start: inOneDay,
+			end: inTwoDays,
+			status: 'TENTATIVE',
+		})
+		const pastAllDeclined = buildEvent({
+			id: 'past-all-declined',
+			start: twoDaysAgo,
+			end: oneDayAgo,
+			attendees: [
+				{ email: 'mailto:someone@example.com', participationStatus: 'DECLINED' },
+			],
+		})
+		const upcomingAccepted = buildEvent({
+			id: 'future-accepted',
+			start: inOneDay,
+			end: inTwoDays,
+			attendees: [
+				{ email: 'mailto:user@example.com', participationStatus: 'ACCEPTED' },
+			],
+		})
+		const upcomingAllDay = buildEvent({
+			id: 'future-all-day',
+			start: inOneDay,
+			end: inTwoDays,
+			allDay: true,
+		})
+		const upcomingMultiDay = buildEvent({
+			id: 'future-multi-day',
+			start: inOneDay,
+			end: inFourDays,
+		})
+
+		getAllObjectsInTimeRange.mockReturnValueOnce([
+			upcomingAllDeclined,
+			upcomingTentativeStatus,
+			pastAllDeclined,
+			upcomingAccepted,
+			upcomingAllDay,
+			upcomingMultiDay,
+		])
+
+		const calendarObjects = [{
+			calendarObject: true,
+			dav: { url: 'url1' },
+			id: '1',
+		}]
+		const start = new Date(Date.UTC(2019, 0, 1, 0, 0, 0, 0))
+		const end = new Date(Date.UTC(2020, 0, 31, 59, 59, 59, 999))
+		const timezone = { calendarJsTimezone: true, tzid: 'UTC' }
+		const result = eventSourceFunction(calendarObjects, {
+			order: 0,
+			displayName: 'Calendar displayname',
+			id: 'Calendar id',
+			color: '#0082c9',
+		}, start, end, timezone)
+
+		expect(result).toHaveLength(6)
+		// The quantized duration class sizes the duration line above the
+		// title; events crossing into other days additionally carry the
+		// proportional end-time position for the line (spans-days + ends-*)
+		expect(result[0].classNames).toEqual([ 'fc-event-nc-all-declined', 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
+		expect(result[1].classNames).toEqual([ 'fc-event-nc-tentative', 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
+		// Past events keep their participation classes
+		expect(result[2].classNames).toEqual([ 'fc-event-nc-all-declined', 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
+		// Accepted invitations render like confirmed events and need no own class
+		expect(result[3].classNames).toEqual([ 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
+		expect(result[4].classNames).toEqual([ 'fc-event-nc-has-duration', 'fc-event-nc-duration-12', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6' ])
+		expect(result[5].classNames).toEqual([ 'fc-event-nc-has-duration', 'fc-event-nc-duration-60', 'fc-event-nc-spans-days', 'fc-event-nc-ends-6', 'fc-event-nc-starts-36' ])
+
+		// Past events get a lightened color anchor via the event definition,
+		// upcoming events keep the calendar color
+		expect(result[2].borderColor).toEqual('#99DAF2')
+		expect(result[0].borderColor).toEqual(undefined)
+	})
+
+	it('should split timed events spanning three or more days in the time grid views', () => {
+		translate.mockImplementation((app, str) => str)
+		getHexForColorName.mockImplementation(() => null)
+		isLight.mockImplementation(() => false)
+
+		const start = new Date(2027, 6, 6, 18, 0, 0)
+		const end = new Date(2027, 6, 9, 6, 0, 0)
+		const event = {
+			name: 'VEVENT',
+			id: 'spanning',
+			isAllDay: vi.fn().mockReturnValue(false),
+			getReferenceRecurrenceId: vi.fn().mockReturnValue({ unixTime: 123 }),
+			canModifyAllDay: vi.fn().mockReturnValue(false),
+			startDate: {
+				getInTimezone: vi.fn().mockReturnValue({ jsDate: start }),
+			},
+			endDate: {
+				getInTimezone: vi.fn().mockReturnValue({ jsDate: end }),
+			},
+			hasComponent: vi.fn().mockReturnValue(false),
+			getFirstPropertyFirstValue: vi.fn().mockReturnValue(null),
+			getPropertyIterator: vi.fn().mockReturnValue([]),
+		}
+		getAllObjectsInTimeRange.mockReturnValueOnce([event])
+
+		const result = eventSourceFunction([{
+			calendarObject: true,
+			dav: { url: 'url1' },
+			id: '1',
+		}], {
+			order: 0,
+			displayName: 'Calendar displayname',
+			id: 'Calendar id',
+		}, new Date(Date.UTC(2027, 6, 1)), new Date(Date.UTC(2027, 7, 1)), { calendarJsTimezone: true, tzid: 'UTC' }, 'timeGridWeek')
+
+		expect(result).toHaveLength(3)
+		expect(result[0].id).toEqual('1###spanning-start')
+		expect(result[0].allDay).toEqual(false)
+		expect(result[0].start).toEqual(start)
+		expect(result[0].end).toEqual(new Date(2027, 6, 7, 0, 0, 0))
+		expect(result[1].id).toEqual('1###spanning-bridge')
+		expect(result[1].allDay).toEqual(true)
+		expect(result[1].start).toEqual(new Date(2027, 6, 7, 0, 0, 0))
+		expect(result[1].end).toEqual(new Date(2027, 6, 9, 0, 0, 0))
+		expect(result[1].startEditable).toEqual(false)
+		expect(result[1].classNames).toContain('fc-event-nc-bridge')
+		expect(result[2].id).toEqual('1###spanning-end')
+		expect(result[2].start).toEqual(new Date(2027, 6, 9, 0, 0, 0))
+		expect(result[2].end).toEqual(end)
+		// All parts carry the real event times for the time labels
+		expect(result[0].extendedProps.realStart).toEqual(start)
+		expect(result[2].extendedProps.realEnd).toEqual(end)
+		// The month grid keeps the single event
+		getAllObjectsInTimeRange.mockReturnValueOnce([event])
+		const unsplit = eventSourceFunction([{
+			calendarObject: true,
+			dav: { url: 'url1' },
+			id: '1',
+		}], {
+			order: 0,
+			displayName: 'Calendar displayname',
+			id: 'Calendar id',
+		}, new Date(Date.UTC(2027, 6, 1)), new Date(Date.UTC(2027, 7, 1)), { calendarJsTimezone: true, tzid: 'UTC' }, 'dayGridMonth')
+		expect(unsplit).toHaveLength(1)
 	})
 
 })

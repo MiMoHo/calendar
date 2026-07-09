@@ -10,7 +10,8 @@ import {
 	uidToHexColor,
 	detectColor,
 	getHexForColorName,
-	getClosestCSS3ColorNameForHex
+	getClosestCSS3ColorNameForHex,
+	lightenColorForPastEvents,
 } from '../../../../src/utils/color.js'
 
 describe('utils/color test suite', () => {
@@ -62,4 +63,16 @@ describe('utils/color test suite', () => {
 		expect(getClosestCSS3ColorNameForHex('#d2699f')).toEqual('palevioletred')
 		expect(getClosestCSS3ColorNameForHex('#ff0000')).toEqual('red')
 	})
+
+	it('should lighten colors for past events preserving the perceived hue', () => {
+		// medium blue stays blue instead of fading to violet
+		expect(lightenColorForPastEvents('#0000CD')).toEqual('#B0C8F6')
+		expect(lightenColorForPastEvents('#FF0000')).toEqual('#FFC6BC')
+		expect(lightenColorForPastEvents('#0082C9')).toEqual('#A2CEF3')
+		// already light colors barely change and never exceed the cap
+		expect(lightenColorForPastEvents('#FFFF99')).toEqual('#EBECB6')
+		expect(lightenColorForPastEvents('not-a-color')).toEqual(null)
+		expect(lightenColorForPastEvents(undefined)).toEqual(null)
+	})
+
 })

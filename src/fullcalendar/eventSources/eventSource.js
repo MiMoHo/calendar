@@ -12,9 +12,10 @@ import { eventSourceFunction } from './eventSourceFunction.js'
 /**
  * Returns a function to generate a FullCalendar event-source based on the Vuex calendar model
  *
+ * @param {function(): string|null} getViewType Returns the fullcalendar view the events are rendered in
  * @return {function(*=): {backgroundColor: *, borderColor: *, className: *, id: *, textColor: *, events: events}}
  */
-export default function() {
+export default function(getViewType = () => null) {
 	const fetchedTimeRangesStore = useFetchedTimeRangesStore()
 	const calendarsStore = useCalendarsStore()
 
@@ -51,10 +52,10 @@ export default function() {
 					}
 
 					const calendarObjects = fetchedTimeRangesStore.getCalendarObjectsByTimeRangeId(timeRangeId)
-					successCallback(eventSourceFunction(calendarObjects, calendar, start, end, timezoneObject))
+					successCallback(eventSourceFunction(calendarObjects, calendar, start, end, timezoneObject, getViewType()))
 				} else {
 					const calendarObjects = fetchedTimeRangesStore.getCalendarObjectsByTimeRangeId(timeRange.id)
-					successCallback(eventSourceFunction(calendarObjects, calendar, start, end, timezoneObject))
+					successCallback(eventSourceFunction(calendarObjects, calendar, start, end, timezoneObject, getViewType()))
 				}
 			},
 		}

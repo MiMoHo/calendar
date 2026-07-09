@@ -42,6 +42,7 @@ describe('fullcalendar/eventDidMount test suite', () => {
 		expect(el.dataset.recurrenceId).toEqual(undefined)
 	})
 
+
 	it('should add an alarm bell icon if event has an alarm - dark', () => {
 		const fcTime = document.createElement('span')
 		fcTime.classList.add('fc-time')

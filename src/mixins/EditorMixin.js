@@ -438,6 +438,32 @@ export default {
 		},
 	},
 
+	watch: {
+		/**
+		 * Publish the color of the currently selected calendar (or the custom
+		 * event color) so the calendar grid can color the preview of a new
+		 * event and the editor can color its status options accordingly. The
+		 * property lives on <body> because the grid is not a descendant of
+		 * the editor and select dropdowns are teleported out of it.
+		 *
+		 * @param {string|null} color The current event color
+		 */
+		illustrationColor: {
+			immediate: true,
+			handler(color) {
+				if (color) {
+					document.body.style.setProperty('--nc-editor-calendar-color', color)
+				} else {
+					document.body.style.removeProperty('--nc-editor-calendar-color')
+				}
+			},
+		},
+	},
+
+	beforeUnmount() {
+		document.body.style.removeProperty('--nc-editor-calendar-color')
+	},
+
 	async created() {
 		// Skip data loading for widgets - they handle it in mounted()
 		if (this.isWidget) {

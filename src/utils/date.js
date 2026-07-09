@@ -170,3 +170,19 @@ export function isMultiDayAllDayEvent(start, end) {
 
 	return adjustedEnd.getTime() > startMidnight.getTime()
 }
+
+/**
+ * Get the calendar day (local midnight) an event's exclusive end belongs to.
+ * An event ending exactly at midnight does not claim the following day.
+ *
+ * @param {Date} end End of the event (exclusive)
+ * @return {Date} Local midnight of the last day the event covers
+ */
+export function getLastCoveredDay(end) {
+	const lastDay = new Date(end)
+	lastDay.setHours(0, 0, 0, 0)
+	if (lastDay.getTime() === end.getTime()) {
+		lastDay.setDate(lastDay.getDate() - 1)
+	}
+	return lastDay
+}

@@ -124,7 +124,7 @@ describe('fullcalendar/eventSource test suite', () => {
 		expect(fetchedTimeRangesStore.getCalendarObjectsByTimeRangeId).toHaveBeenNthCalledWith(1, 42)
 
 		expect(eventSourceFunction).toHaveBeenCalledTimes(1)
-		expect(eventSourceFunction).toHaveBeenNthCalledWith(1, [{ calendarObjectId: 1 }, { calendarObjectId: 2 }], calendar, start, end, { calendarJsTimezone: true, tzid: 'America/New_York' })
+		expect(eventSourceFunction).toHaveBeenNthCalledWith(1, [{ calendarObjectId: 1 }, { calendarObjectId: 2 }], calendar, start, end, { calendarJsTimezone: true, tzid: 'America/New_York' }, null)
 
 		expect(successCallback).toHaveBeenCalledTimes(1)
 		expect(successCallback).toHaveBeenNthCalledWith(1, [{ fcEventId: 1 }, { fcEventId: 2 }])
@@ -188,7 +188,7 @@ describe('fullcalendar/eventSource test suite', () => {
 		expect(fetchedTimeRangesStore.getCalendarObjectsByTimeRangeId).toHaveBeenNthCalledWith(1, 42)
 
 		expect(eventSourceFunction).toHaveBeenCalledTimes(1)
-		expect(eventSourceFunction).toHaveBeenNthCalledWith(1, [{ calendarObjectId: 1 }, { calendarObjectId: 2 }], calendar, start, end, { calendarJsTimezone: true, tzid: 'America/New_York' })
+		expect(eventSourceFunction).toHaveBeenNthCalledWith(1, [{ calendarObjectId: 1 }, { calendarObjectId: 2 }], calendar, start, end, { calendarJsTimezone: true, tzid: 'America/New_York' }, null)
 
 		expect(successCallback).toHaveBeenCalledTimes(1)
 		expect(successCallback).toHaveBeenNthCalledWith(1, [{ fcEventId: 1 }, { fcEventId: 2 }])
@@ -257,7 +257,7 @@ describe('fullcalendar/eventSource test suite', () => {
 		expect(fetchedTimeRangesStore.getCalendarObjectsByTimeRangeId).toHaveBeenNthCalledWith(1, 42)
 
 		expect(eventSourceFunction).toHaveBeenCalledTimes(1)
-		expect(eventSourceFunction).toHaveBeenNthCalledWith(1, [{ calendarObjectId: 1 }, { calendarObjectId: 2 }], calendar, start, end, { calendarJsTimezone: true, tzid: 'UTC' })
+		expect(eventSourceFunction).toHaveBeenNthCalledWith(1, [{ calendarObjectId: 1 }, { calendarObjectId: 2 }], calendar, start, end, { calendarJsTimezone: true, tzid: 'UTC' }, null)
 
 		expect(successCallback).toHaveBeenCalledTimes(1)
 		expect(successCallback).toHaveBeenNthCalledWith(1, [{ fcEventId: 1 }, { fcEventId: 2 }])
