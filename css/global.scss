@@ -7,6 +7,18 @@
 	white-space: pre-wrap;
 }
 
+// The checkbox styles of @nextcloud/vue pin the box a fixed offset below
+// the row's top edge (margin-block: <calc> auto). The offset would centre
+// the box if the row's content were exactly as high as the calc assumes,
+// but it grows taller than that, while the single-line label next to the
+// box stays centred - the box visibly floats above its label (e.g. the
+// "All day" checkbox in the event editor). Centre the box on the label
+// instead; !important is needed to beat the library's scoped attribute
+// selector.
+.checkbox-radio-switch .checkbox-content__icon {
+	margin-block: auto !important;
+}
+
 .app-navigation-spacer {
 	list-style-type: none;
 }
