@@ -23,7 +23,7 @@
 				:fillColor="status.fillColor"
 				:size="20" />
 			<div class="avatar-participation-status__text">
-				<span v-if="adjustedTime" class="avatar-participation-status__text__time">{{ adjustedTime }} local time, </span>{{ status.text.trim() }}
+				<span v-if="adjustedTime" class="avatar-participation-status__text__time">{{ adjustedTime }} local time, </span>{{ statusText }}
 			</div>
 		</template>
 	</div>
@@ -106,6 +106,19 @@ export default {
 
 		timezone: {
 			type: String,
+			required: false,
+			default: null,
+		},
+
+		role: {
+			type: String,
+			required: false,
+			default: null,
+		},
+
+		rsvp: {
+			// Boolean, or null when the reply request state is unknown
+			validator: (value) => typeof value === 'boolean' || value === null,
 			required: false,
 			default: null,
 		},
@@ -260,6 +273,52 @@ export default {
 		adjustedTime() {
 			return adjustAttendeeTime(this.calendarObjectInstanceStore.calendarObjectInstance.startDate, this.timezone)
 		},
+
+		/**
+		 * The status text with the participation type appended
+		 *
+		 * @return {string}
+		 */
+		statusText() {
+			const text = this.status.text.trim()
+			if (!this.participationType) {
+				return text
+			}
+
+			return `${text}: ${this.participationType}`
+		},
+
+		/**
+		 * The participation type set through the three-dot menu (role and
+		 * whether a reply was requested), shown after the status so the
+		 * invitation kind is visible at a glance
+		 *
+		 * @return {?string}
+		 */
+		participationType() {
+			if (this.isGroup || this.isResource || this.attendeeIsOrganizer || this.isSuggestion) {
+				return null
+			}
+
+			const roleLabels = {
+				CHAIR: t('calendar', 'Chairperson'),
+				'REQ-PARTICIPANT': t('calendar', 'Required participant'),
+				'OPT-PARTICIPANT': t('calendar', 'Optional participant'),
+				'NON-PARTICIPANT': t('calendar', 'Non-participant'),
+			}
+			const roleLabel = roleLabels[this.role]
+			if (!roleLabel) {
+				return null
+			}
+
+			if (this.rsvp === null) {
+				return roleLabel
+			}
+
+			return this.rsvp
+				? t('calendar', '{role} with reply', { role: roleLabel })
+				: t('calendar', '{role} without reply', { role: roleLabel })
+		},
 	},
 }
 </script>
@@ -268,12 +327,15 @@ export default {
 .avatar-participation-status {
 	position: relative;
 	height: 38px;
-	width: 38px;
+	// The avatar acts as the row's icon: it starts on the icon column and
+	// this width puts the name right on the content column of the editor
+	width: 36px;
 
 	&__indicator {
 		position: absolute;
 		bottom: 2px !important;
-		inset-inline-start: 38px;
+		// Badge on the avatar's end corner instead of floating beside it
+		inset-inline-start: 20px;
 		inset-inline-end: 0;
 		background-size: 10px;
 		height: 15px;
@@ -285,7 +347,8 @@ export default {
 
 	&__text {
 		color: var(--color-text-maxcontrast);
-		inset-inline-start: 58px;
+		// The status sits on the content column, like the name above it
+		inset-inline-start: 36px;
 		bottom: 21px;
 		white-space: nowrap;
 		position: relative;

@@ -15,7 +15,9 @@
 			:organizerDisplayName="organizerDisplayName"
 			:commonName="commonName"
 			:timezone="timezone"
-			:isGroup="isGroup" />
+			:isGroup="isGroup"
+			:role="attendee.role"
+			:rsvp="attendee.rsvp" />
 
 		<AttendeeDisplay
 			:displayName="commonName"
