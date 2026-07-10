@@ -16,6 +16,23 @@ import useCalendarObjectInstanceStore from './calendarObjectInstance.js'
 import useCalendarsStore from './calendars.js'
 import useFetchedTimeRangesStore from './fetchedTimeRanges.js'
 
+/**
+ * Whether any component of the calendar-object has attendees, so saving it
+ * makes the server's scheduling plugin rewrite the stored resource
+ *
+ * @param {CalendarObject} calendarObject The calendar-object to check
+ * @return {boolean}
+ */
+function isSchedulingObject(calendarObject) {
+	for (const vObject of calendarObject.calendarComponent.getVObjectIterator()) {
+		if (vObject.hasProperty('ATTENDEE') || vObject.hasProperty('ORGANIZER')) {
+			return true
+		}
+	}
+
+	return false
+}
+
 export default defineStore('calendarObjects', {
 	state: () => {
 		return {
@@ -106,6 +123,7 @@ export default defineStore('calendarObjects', {
 			if (calendarObject.existsOnServer) {
 				calendarObject.dav.data = calendarObject.calendarComponent.toICS()
 				await calendarObject.dav.update()
+				await this.refreshCalendarObjectFromServer({ calendarObject })
 
 				fetchedTimeRangesStore.addCalendarObjectIdToAllTimeRangesOfCalendar({
 					calendarId: calendarObject.calendarId,
@@ -121,6 +139,7 @@ export default defineStore('calendarObjects', {
 			const calendar = calendarsStore.getCalendarById(calendarObject.calendarId)
 			calendarObject.dav = await calendar.dav.createVObject(calendarObject.calendarComponent.toICS())
 			calendarObject.existsOnServer = true
+			await this.refreshCalendarObjectFromServer({ calendarObject })
 			this.updateCalendarObjectIdMutation({ calendarObject })
 
 			this.appendCalendarObjectMutation({ calendarObject })
@@ -136,6 +155,31 @@ export default defineStore('calendarObjects', {
 			})
 			this.resetCalendarObjectToDavMutation({ calendarObject })
 			this.modificationCount++
+		},
+
+		/**
+		 * Re-reads a saved calendar-object from the server when the save
+		 * triggered scheduling: the server rewrites the stored resource
+		 * (e.g. it stamps SCHEDULE-STATUS on the attendees), so without the
+		 * refresh, reopening the event keeps showing "Invitation will be
+		 * sent" until the whole page is reloaded
+		 *
+		 * @param {object} data destructuring object
+		 * @param {CalendarObject} data.calendarObject Calendar-object that was saved
+		 * @return {Promise<void>}
+		 */
+		async refreshCalendarObjectFromServer({ calendarObject }) {
+			if (!isSchedulingObject(calendarObject)) {
+				return
+			}
+
+			try {
+				await calendarObject.dav.fetchCompleteData(true)
+				this.resetCalendarObjectToDavMutation({ calendarObject })
+			} catch (error) {
+				// The stale local copy is a display issue, not worth failing the save
+				logger.error('Could not refresh calendar object after saving', { error })
+			}
 		},
 
 		/**

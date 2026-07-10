@@ -57,4 +57,50 @@ describe('store/calendarObjects test suite', () => {
 		})
 	})
 
+	describe('refreshCalendarObjectFromServer', () => {
+		const makeObject = (vObjects) => ({
+			id: 'a',
+			existsOnServer: true,
+			dav: {
+				data: '',
+				fetchCompleteData: vi.fn(),
+			},
+			calendarComponent: {
+				getVObjectIterator: () => vObjects[Symbol.iterator](),
+			},
+		})
+
+		const makeVObject = (properties) => ({
+			hasProperty: (name) => properties.includes(name),
+		})
+
+		it('re-reads the object from the server after saving with attendees', async () => {
+			const store = useCalendarObjectsStore()
+			const calendarObject = makeObject([makeVObject(['ORGANIZER', 'ATTENDEE'])])
+
+			await store.refreshCalendarObjectFromServer({ calendarObject })
+
+			// forceReFetch: the server rewrote the resource (SCHEDULE-STATUS)
+			expect(calendarObject.dav.fetchCompleteData).toHaveBeenCalledWith(true)
+		})
+
+		it('skips the round trip when the object does not schedule', async () => {
+			const store = useCalendarObjectsStore()
+			const calendarObject = makeObject([makeVObject([])])
+
+			await store.refreshCalendarObjectFromServer({ calendarObject })
+
+			expect(calendarObject.dav.fetchCompleteData).not.toHaveBeenCalled()
+		})
+
+		it('does not fail the save when the refresh request fails', async () => {
+			const store = useCalendarObjectsStore()
+			const calendarObject = makeObject([makeVObject(['ATTENDEE'])])
+			calendarObject.dav.fetchCompleteData.mockRejectedValue(new Error('offline'))
+
+			await expect(store.refreshCalendarObjectFromServer({ calendarObject }))
+				.resolves.toBeUndefined()
+		})
+	})
+
 })
