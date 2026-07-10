@@ -24,11 +24,14 @@
 			:ariaLabel="$t('calendar', 'End repeat date')"
 			:appendToBody="true"
 			@change="changeUntil" />
+		<!-- The select above already says "End repeat: after"; a visible
+			title on the count field would just repeat that -->
 		<NcTextField
 			v-if="isCount"
 			class="repeat-option-end__count"
 			type="number"
-			:label="$t('calendar', 'Occurrences')"
+			:labelOutside="true"
+			:aria-label="$t('calendar', 'Occurrences')"
 			:modelValue="String(count)"
 			@update:modelValue="changeCount" />
 	</div>

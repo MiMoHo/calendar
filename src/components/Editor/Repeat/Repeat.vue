@@ -29,9 +29,9 @@
 		<NcModal
 			v-model:show="showOptions"
 			size="small"
-			:name="$t('calendar', 'Repeat event')">
+			:name="modalTitle">
 			<div class="property-repeat__options">
-				<h2>{{ $t('calendar', 'Repeat event') }}</h2>
+				<h2>{{ modalTitle }}</h2>
 				<RepeatFreqInterval
 					v-if="!isRecurrenceException && !isReadOnly"
 					:frequency="recurrenceRule.frequency"
@@ -93,6 +93,7 @@
 </template>
 
 <script>
+import { DateTimeValue } from '@nextcloud/calendar-js'
 import { NcActionButton as ActionButton, NcActions as Actions, NcButton, NcModal } from '@nextcloud/vue'
 import { mapStores } from 'pinia'
 import Check from 'vue-material-design-icons/Check.vue'
@@ -107,6 +108,7 @@ import RepeatFreqYearlyOptions from './RepeatFreqYearlyOptions.vue'
 import RepeatSummary from './RepeatSummary.vue'
 import RepeatUnsupportedWarning from './RepeatUnsupportedWarning.vue'
 import useCalendarObjectInstanceStore from '../../../store/calendarObjectInstance.js'
+import logger from '../../../utils/logger.js'
 
 export default {
 	name: 'Repeat',
@@ -239,6 +241,66 @@ export default {
 				return this.t('calendar', 'Save')
 			}
 			return this.t('calendar', 'Edit')
+		},
+
+		/**
+		 * The position of the edited occurrence within its series and the
+		 * series length, e.g. "4/∞" for the fourth occurrence of a
+		 * never-ending event or "5/5" for the last one of a limited event.
+		 * Null for events that do not recur yet.
+		 *
+		 * @return {?string}
+		 */
+		seriesPosition() {
+			const eventComponent = this.calendarObjectInstance.eventComponent
+			if (!this.isRepeating || !eventComponent) {
+				return null
+			}
+
+			try {
+				const recurrenceManager = eventComponent.recurrenceManager
+				if (!recurrenceManager || !recurrenceManager.masterItem.isRecurring()) {
+					return null
+				}
+
+				const seriesStart = recurrenceManager.masterItem.getReferenceRecurrenceId()
+				const recurrenceId = eventComponent.getReferenceRecurrenceId()
+				const index = recurrenceManager.countAllOccurrencesBetween(seriesStart, recurrenceId)
+				if (index < 1) {
+					return null
+				}
+
+				let total = '∞'
+				if (this.recurrenceRule.count !== null) {
+					total = this.recurrenceRule.count
+				} else if (this.recurrenceRule.until !== null) {
+					total = recurrenceManager.countAllOccurrencesBetween(
+						seriesStart,
+						DateTimeValue.fromJSDate(this.recurrenceRule.until, true),
+					)
+				}
+
+				return `${index}/${total}`
+			} catch (error) {
+				logger.debug('Could not determine the series position', { error })
+				return null
+			}
+		},
+
+		/**
+		 * The modal title; for events that already recur it carries the
+		 * position within the series
+		 *
+		 * @return {string}
+		 */
+		modalTitle() {
+			if (!this.seriesPosition) {
+				return this.$t('calendar', 'Repeat event')
+			}
+
+			return this.$t('calendar', 'Repeat event ({position})', {
+				position: this.seriesPosition,
+			})
 		},
 	},
 
@@ -527,5 +589,13 @@ export default {
 // full-width selects
 .property-repeat__options :deep(.repeat-option-set) {
 	margin-inline: 0;
+}
+
+// The count and until fields follow the end-type select on their own
+// full-width lines, which carry no spacing of their own - without the
+// margin they sit glued under the select
+.property-repeat__options :deep(.repeat-option-end__until),
+.property-repeat__options :deep(.repeat-option-end__count) {
+	margin-block-start: var(--default-grid-baseline);
 }
 </style>
