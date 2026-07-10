@@ -513,6 +513,20 @@ export default {
 				const role = roleLabels[attendee.role] || attendee.role
 				return `${name}\t${email}\t${status}\t${role}`
 			})
+			// The organizer belongs to the event like every attendee, so the
+			// export always carries them in the first row, marked by role;
+			// their participation status comes from their own attendee entry
+			// when they attend, and defaults to the organizer wording shown
+			// in the attendee list otherwise
+			const organizer = this.calendarObjectInstance.organizer
+			if (organizer) {
+				const organizerAttendee = this.invitees
+					.find((attendee) => removeMailtoPrefix(attendee.uri) === removeMailtoPrefix(organizer.uri))
+				const status = organizerAttendee
+					? (statusLabels[organizerAttendee.participationStatus] || organizerAttendee.participationStatus)
+					: this.t('calendar', 'Organizer of the event')
+				rows.unshift(`${organizer.commonName || ''}\t${removeMailtoPrefix(organizer.uri) || ''}\t${status}\t${this.t('calendar', 'Organizer')}`)
+			}
 			const tsvContent = [headers, ...rows].join('\n')
 			try {
 				await navigator.clipboard.writeText(tsvContent)
