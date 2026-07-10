@@ -175,6 +175,17 @@ export default {
 				weekends: this.showWeekends,
 				dayMaxEventRows: this.eventLimit,
 				views: {
+					// The all-day section must not squeeze the hour grid off
+					// the screen: past five stacked levels a "+ more" link
+					// takes over (the month grid keeps the user setting)
+					timeGridWeek: {
+						dayMaxEventRows: 5,
+					},
+
+					timeGridDay: {
+						dayMaxEventRows: 5,
+					},
+
 					multiMonthYear: {
 						// fullcalendar's multi-month view always limits event rows
 						// by cell height (it hardcodes dayMaxEventRows: true), so
@@ -312,6 +323,13 @@ export default {
 
 			resizeObserver.observe(this.$refs.fullCalendar.$el)
 		}
+
+		// Delegated, so it survives fullcalendar re-rendering its DOM
+		this.$el.addEventListener('wheel', this.forwardHeaderWheel, { passive: false })
+	},
+
+	beforeUnmount() {
+		this.$el.removeEventListener('wheel', this.forwardHeaderWheel)
 	},
 
 	async created() {
@@ -376,6 +394,32 @@ export default {
 	},
 
 	methods: {
+		/**
+		 * The sticky header of the time grids (day headers and the all-day
+		 * events) does not scroll itself, so wheeling over it did nothing.
+		 * Forward those wheels to the hour grid below - especially with
+		 * many all-day events the mouse easily rests on the header.
+		 *
+		 * @param {WheelEvent} event The wheel event
+		 */
+		forwardHeaderWheel(event) {
+			const view = event.target.closest('.fc-timeGridWeek-view, .fc-timeGridDay-view')
+			if (!view || event.deltaY === 0) {
+				return
+			}
+
+			const scroller = view.querySelector('.fc-timegrid-body')?.closest('.fc-scroller')
+			if (!scroller || scroller.contains(event.target)) {
+				// Over the hour grid the native scrolling handles it
+				return
+			}
+
+			event.preventDefault()
+			// deltaMode: 0 = pixels, 1 = lines, 2 = pages
+			const factor = event.deltaMode === 1 ? 24 : (event.deltaMode === 2 ? scroller.clientHeight : 1)
+			scroller.scrollTop += event.deltaY * factor
+		},
+
 		/**
 		 * Scroll the month view to today when loading the calendar,
 		 * so people can directly see today's date and events.
