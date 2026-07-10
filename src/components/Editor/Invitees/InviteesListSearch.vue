@@ -68,7 +68,7 @@ import {
 	circleSearchByName,
 } from '../../../services/circleService.js'
 import isCirclesEnabled from '../../../services/isCirclesEnabled.js'
-import { removeMailtoPrefix } from '../../../utils/attendee.js'
+import { parseMailboxQuery, removeMailtoPrefix } from '../../../utils/attendee.js'
 import { randomId } from '../../../utils/randomId.js'
 
 export default {
@@ -135,22 +135,26 @@ export default {
 					matches.push(...circleResults)
 				}
 
+				// Full mailboxes like "Boss <boss@example.com>" (the format
+				// mail clients and Nextcloud's copy button produce) offer
+				// the contained address just like a plain one
+				const { name, email } = parseMailboxQuery(query)
 				// Source of the Regex: https://stackoverflow.com/a/46181
 				// eslint-disable-next-line
 				const emailRegex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-				if (emailRegex.test(query)) {
-					const alreadyInList = matches.find((attendee) => attendee.email.toLowerCase() === query.toLowerCase())
+				if (emailRegex.test(email)) {
+					const alreadyInList = matches.find((attendee) => attendee.email?.toLowerCase() === email.toLowerCase())
 					if (!alreadyInList) {
 						matches.unshift({
 							calendarUserType: 'INDIVIDUAL',
-							commonName: query,
-							email: query,
+							commonName: name,
+							email,
 							isUser: false,
 							avatar: null,
 							language: null,
 							timezoneId: null,
 							hasMultipleEMails: false,
-							dropdownName: query,
+							dropdownName: name === email ? email : `${name} (${email})`,
 						})
 					}
 				}

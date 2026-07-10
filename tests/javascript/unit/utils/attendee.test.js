@@ -6,6 +6,7 @@
 import {
 	addMailtoPrefix,
 	organizerDisplayName,
+	parseMailboxQuery,
 	removeMailtoPrefix,
 } from '../../../../src/utils/attendee'
 
@@ -47,5 +48,27 @@ describe('utils/attendee test suite', () => {
 			commonName,
 			uri,
 		})).toEqual(commonName)
+	})
+
+	it('should split a full mailbox into name and address', () => {
+		expect(parseMailboxQuery('Boss <boss@example.com>'))
+			.toEqual({ name: 'Boss', email: 'boss@example.com' })
+		expect(parseMailboxQuery('"Boss, Big" <boss@example.com>'))
+			.toEqual({ name: 'Boss, Big', email: 'boss@example.com' })
+		expect(parseMailboxQuery('boss@example.com <boss@example.com>'))
+			.toEqual({ name: 'boss@example.com', email: 'boss@example.com' })
+		expect(parseMailboxQuery('<boss@example.com>'))
+			.toEqual({ name: 'boss@example.com', email: 'boss@example.com' })
+	})
+
+	it('should pass plain queries through unchanged', () => {
+		expect(parseMailboxQuery('boss@example.com'))
+			.toEqual({ name: 'boss@example.com', email: 'boss@example.com' })
+		expect(parseMailboxQuery('  boss@example.com  '))
+			.toEqual({ name: 'boss@example.com', email: 'boss@example.com' })
+		expect(parseMailboxQuery('Boss'))
+			.toEqual({ name: 'Boss', email: 'Boss' })
+		expect(parseMailboxQuery(null))
+			.toEqual({ name: '', email: '' })
 	})
 })

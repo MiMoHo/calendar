@@ -22,6 +22,33 @@ export function removeMailtoPrefix(uri) {
 }
 
 /**
+ * Split a full mailbox string like 'Boss <boss@example.com>' into its
+ * display name and address. Mail clients and Nextcloud's own copy button
+ * produce this format, so pasting it into the attendee search must work.
+ * Plain addresses pass through with the address as name.
+ *
+ * @param {string} query The search input
+ * @return {{name: string, email: string}}
+ */
+export function parseMailboxQuery(query) {
+	if (typeof query !== 'string') {
+		return { name: '', email: '' }
+	}
+
+	const match = query.match(/^\s*"?([^"<>]*?)"?\s*<([^<>\s]+)>\s*$/)
+	if (match) {
+		const email = match[2].trim()
+		return {
+			name: match[1].trim() || email,
+			email,
+		}
+	}
+
+	const trimmed = query.trim()
+	return { name: trimmed, email: trimmed }
+}
+
+/**
  * Add the mailto prefix to a URI if it doesn't have one yet and return it
  *
  * @param {string} uri URI to add the prefix to
