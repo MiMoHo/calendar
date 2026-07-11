@@ -121,7 +121,7 @@
 					</template>
 					{{ $t('calendar', 'Delete') }}
 				</NcButton>
-				<NcButton variant="tertiary" :href="downloadUrl">
+				<NcButton variant="tertiary" @click="downloadCalendar">
 					<template #icon>
 						<DownloadIcon :size="20" />
 					</template>
@@ -146,6 +146,7 @@
 </template>
 
 <script>
+import HttpClient from '@nextcloud/axios'
 import { showError, showSuccess } from '@nextcloud/dialogs'
 import { getLanguage } from '@nextcloud/l10n'
 import { NcAppNavigationSpacer, NcButton, NcCheckboxRadioSwitch, NcColorPicker, NcDialog, NcModal, NcSelect, NcTextField } from '@nextcloud/vue'
@@ -166,6 +167,7 @@ import {
 	getAmountAndUnitForTimedEvents,
 	getAmountHoursMinutesAndUnitForAllDayEvents,
 } from '../../utils/alarms.js'
+import { calendarExportFilename } from '../../utils/exportFilename.js'
 import logger from '../../utils/logger.js'
 import { isAfterVersion } from '../../utils/nextcloudVersion.ts'
 
@@ -249,6 +251,17 @@ export default {
 		 */
 		downloadUrl() {
 			return this.calendar.url + '?export'
+		},
+
+		/**
+		 * File name of the export, always derived from the calendar's
+		 * current name (the server names the file after the immutable
+		 * calendar URI instead)
+		 *
+		 * @return {string}
+		 */
+		downloadFilename() {
+			return calendarExportFilename(this.calendar, this.calendarsStore.calendars)
 		},
 
 		/**
@@ -454,6 +467,28 @@ export default {
 		 */
 		closeModal() {
 			this.calendarsStore.editCalendarModal = undefined
+		},
+
+		/**
+		 * Downloads the calendar export under the calendar's current name
+		 * (see downloadFilename); the server would name the file after the
+		 * immutable calendar URI, which diverges from the name after
+		 * renames or when a name was already taken on creation
+		 */
+		async downloadCalendar() {
+			try {
+				const response = await HttpClient.get(this.downloadUrl, { responseType: 'blob' })
+				const url = URL.createObjectURL(response.data)
+				const link = document.createElement('a')
+				link.href = url
+				link.download = this.downloadFilename
+				document.body.appendChild(link)
+				link.click()
+				link.remove()
+				URL.revokeObjectURL(url)
+			} catch (error) {
+				showError(this.$t('calendar', 'Failed to export the calendar'))
+			}
 		},
 
 		/**
