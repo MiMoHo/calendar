@@ -197,6 +197,20 @@ describe('utils/alarms test suite', () => {
 		expect(getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(1, 8, 30, 'weeks')).toEqual(-159 * 60 * 60 - 30 * 60)
 	})
 
+	it('should get the total amount of seconds for reminders after the event', () => {
+		expect(getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(1, 9, 0, 'days', false)).toEqual(33 * 60 * 60)
+
+		expect(getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(2, 9, 30, 'days', false)).toEqual(57 * 60 * 60 + 30 * 60)
+
+		expect(getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(1, 9, 0, 'weeks', false)).toEqual(177 * 60 * 60)
+
+		// an amount of 0 means on the day of the event, whatever the direction
+		expect(getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(0, 9, 1, 'days', false)).toEqual(32460)
+
+		// the default direction stays before the event
+		expect(getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(1, 9, 0, 'days')).toEqual(-15 * 60 * 60)
+	})
+
 	describe('updateAlarms', () => {
 		it('keeps DISPLAY alarms RFC-conformant: a DESCRIPTION but no SUMMARY/ATTENDEE', () => {
 			const event = firstEventFromICS(eventICS(

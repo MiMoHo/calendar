@@ -18,7 +18,7 @@ import moment from '@nextcloud/moment'
 export default (alarm, isAllDay, currentUserTimezone, locale) => {
 	if (alarm.relativeTrigger !== null) {
 		// relative trigger
-		if (isAllDay && alarm.relativeIsRelatedToStart && alarm.relativeTrigger < 86400) {
+		if (isAllDay && alarm.relativeIsRelatedToStart) {
 			if (alarm.relativeTrigger === 0) {
 				return t('calendar', 'Midnight on the day the event starts')
 			}
@@ -53,6 +53,30 @@ export default (alarm, isAllDay, currentUserTimezone, locale) => {
 					)
 				}
 			}
+			if (alarm.relativeTrigger >= 86400) {
+				if (alarm.relativeUnitAllDay === 'days') {
+					return n(
+						'calendar',
+						'%n day after the event at {formattedHourMinute}',
+						'%n days after the event at {formattedHourMinute}',
+						alarm.relativeAmountAllDay,
+						{
+							formattedHourMinute,
+						},
+					)
+				} else {
+					return n(
+						'calendar',
+						'%n week after the event at {formattedHourMinute}',
+						'%n weeks after the event at {formattedHourMinute}',
+						alarm.relativeAmountAllDay,
+						{
+							formattedHourMinute,
+						},
+					)
+				}
+			}
+
 			return t('calendar', 'on the day of the event at {formattedHourMinute}', {
 				formattedHourMinute,
 			})

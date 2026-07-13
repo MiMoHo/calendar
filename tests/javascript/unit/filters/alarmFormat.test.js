@@ -100,7 +100,7 @@ describe('format/alarmFormat test suite', () => {
 		expect(alarmFormat(alarm, true, 'Europe/Berlin', 'de')).toMatchSnapshot()
 	})
 
-	it('should format an alarm for an all-day event not supported in the default range', () => {
+	it('should format an alarm firing days after an all-day event', () => {
 		const alarm = {
 			type: 'EMAIL',
 			isRelative: true,

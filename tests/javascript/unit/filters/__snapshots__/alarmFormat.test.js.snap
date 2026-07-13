@@ -4,9 +4,9 @@ exports[`format/alarmFormat test suite > should format a relative trigger before
 
 exports[`format/alarmFormat test suite > should format a relative trigger before the event starts 1`] = `"{time} before the event starts"`;
 
-exports[`format/alarmFormat test suite > should format an alarm for an all-day event days before 1`] = `"%n days before the event at {formattedHourMinute}"`;
+exports[`format/alarmFormat test suite > should format an alarm firing days after an all-day event 1`] = `"%n days after the event at {formattedHourMinute}"`;
 
-exports[`format/alarmFormat test suite > should format an alarm for an all-day event not supported in the default range 1`] = `"{time} after the event starts"`;
+exports[`format/alarmFormat test suite > should format an alarm for an all-day event days before 1`] = `"%n days before the event at {formattedHourMinute}"`;
 
 exports[`format/alarmFormat test suite > should format an alarm for an all-day event on the same day at a certain time 1`] = `"on the day of the event at {formattedHourMinute}"`;
 

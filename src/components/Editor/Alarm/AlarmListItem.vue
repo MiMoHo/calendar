@@ -29,6 +29,18 @@
 				:unit="alarm.relativeUnitTimed"
 				:disabled="false"
 				@change="changeRelativeUnitTimed" />
+			<!-- With an amount of 0 the reminder is at the event itself,
+				so there is no before or after to choose -->
+			<NcSelect
+				v-if="alarm.relativeAmountTimed > 0"
+				class="property-alarm-item__edit__direction"
+				:modelValue="relativeDirectionTimed"
+				:options="relativeDirectionTimedOptions"
+				:searchable="false"
+				:clearable="false"
+				:ariaLabelCombobox="$t('calendar', 'Before or after the event')"
+				label="label"
+				@update:modelValue="changeRelativeDirectionTimed" />
 		</div>
 		<div
 			v-if="isEditing && isRelativeAlarm && isAllDay"
@@ -47,11 +59,20 @@
 					:disabled="false"
 					class="time-unit-select"
 					@change="changeRelativeUnitAllDay" />
+				<!-- With an amount of 0 the reminder is on the day of the
+					event itself, so there is no before or after to choose -->
+				<NcSelect
+					v-if="alarm.relativeAmountAllDay > 0"
+					class="property-alarm-item__edit--all-day__time__direction"
+					:modelValue="relativeDirectionTimed"
+					:options="relativeDirectionTimedOptions"
+					:searchable="false"
+					:clearable="false"
+					:ariaLabelCombobox="$t('calendar', 'Before or after the event')"
+					label="label"
+					@update:modelValue="changeRelativeDirectionAllDay" />
 			</div>
 			<div class="property-alarm-item__edit--all-day__time">
-				<span class="property-alarm-item__edit--all-day__time__before-at-label">
-					{{ $t('calendar', 'before at') }}
-				</span>
 				<TimePicker
 					:date="relativeAllDayDate"
 					@change="changeRelativeHourMinuteAllDay" />
@@ -164,6 +185,7 @@ import {
 	NcActionRadio as ActionRadio,
 	NcActions as Actions,
 	NcActionSeparator as ActionSeparator,
+	NcSelect,
 	NcTextField,
 } from '@nextcloud/vue'
 import { mapState, mapStores } from 'pinia'
@@ -187,6 +209,7 @@ export default {
 		ActionButton,
 		ActionRadio,
 		ActionSeparator,
+		NcSelect,
 		NcTextField,
 		Check,
 		Delete,
@@ -241,18 +264,8 @@ export default {
 				return false
 			}
 
-			// We don't allow editing when this event is timed
-			// and the trigger time is positive
-			if (!this.isAllDay && this.alarm.relativeTrigger > 0) {
-				return false
-			}
-
-			// We don't allow editing when this event is all-day
-			// and the trigger time is bigger than one day
-			if (this.isAllDay && this.alarm.relativeTrigger > 86400) {
-				return false
-			}
-
+			// Both timed and all-day events express any relative
+			// trigger through the amount, unit and direction fields
 			return true
 		},
 
@@ -325,6 +338,32 @@ export default {
 			date.setMinutes(this.alarm.relativeMinutesAllDay)
 
 			return date
+		},
+
+		/**
+		 * The options for the direction of a timed reminder: before the
+		 * event (the default) or after it
+		 *
+		 * @return {object[]}
+		 */
+		relativeDirectionTimedOptions() {
+			return [{
+				label: this.$t('calendar', 'before the event'),
+				isBefore: true,
+			}, {
+				label: this.$t('calendar', 'after the event'),
+				isBefore: false,
+			}]
+		},
+
+		/**
+		 * The currently selected direction of the timed reminder
+		 *
+		 * @return {object}
+		 */
+		relativeDirectionTimed() {
+			return this.relativeDirectionTimedOptions
+				.find((option) => option.isBefore === !!this.alarm.relativeIsBefore)
 		},
 
 		timeFormat() {
@@ -487,6 +526,38 @@ export default {
 			this.calendarObjectInstanceStore.changeAlarmUnitAllDay({
 				alarm: this.alarm,
 				unit,
+			})
+		},
+
+		/**
+		 * Changes whether the timed reminder fires before or after the event
+		 *
+		 * @param {?object} option The selected direction option
+		 */
+		changeRelativeDirectionTimed(option) {
+			if (!option) {
+				return
+			}
+
+			this.calendarObjectInstanceStore.changeAlarmDirectionTimed({
+				alarm: this.alarm,
+				isBefore: option.isBefore,
+			})
+		},
+
+		/**
+		 * Changes whether the all-day reminder fires before or after the event
+		 *
+		 * @param {?object} option The selected direction option
+		 */
+		changeRelativeDirectionAllDay(option) {
+			if (!option) {
+				return
+			}
+
+			this.calendarObjectInstanceStore.changeAlarmDirectionAllDay({
+				alarm: this.alarm,
+				isBefore: option.isBefore,
 			})
 		},
 

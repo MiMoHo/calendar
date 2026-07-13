@@ -162,17 +162,20 @@ export function getAmountHoursMinutesAndUnitForAllDayEvents(totalSeconds) {
  * @param {number} hours Time of reminder
  * @param {number} minutes Time of reminder
  * @param {string} unit days/weeks
+ * @param {boolean=} isBefore Whether the reminder fires before the event
+ * (with an amount of 0 the reminder is on the day of the event itself
+ * and the direction does not apply)
  * @return {number}
  */
-export function getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(amount, hours, minutes, unit) {
+export function getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(amount, hours, minutes, unit, isBefore = true) {
 	if (unit === 'weeks') {
 		amount *= 7
 		unit = 'days'
 	}
 
 	// 0 is on the same day of the all-day event => positive
-	// 1 ... n before the event is negative
-	const isNegative = amount > 0
+	// 1 ... n before the event is negative, after the event positive
+	const isNegative = amount > 0 && isBefore
 
 	if (isNegative) {
 		// If it's negative, we need to subtract one day

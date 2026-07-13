@@ -1975,11 +1975,43 @@ export default defineStore('calendarObjectInstance', {
 			amount,
 		}) {
 			if (alarm.alarmComponent) {
+				// While the amount was 0 (reminder at the event itself) the
+				// direction choice is hidden, so a new amount starts over
+				// with the default direction: before the event
+				const isBefore = alarm.relativeAmountTimed === 0
+					? true
+					: alarm.relativeIsBefore
+
 				alarm.alarmComponent.trigger.value.totalSeconds
-					= getTotalSecondsFromAmountAndUnitForTimedEvents(amount, alarm.relativeUnitTimed, alarm.relativeIsBefore)
+					= getTotalSecondsFromAmountAndUnitForTimedEvents(amount, alarm.relativeUnitTimed, isBefore)
 
 				alarm.relativeAmountTimed = amount
 				alarm.relativeTrigger = alarm.alarmComponent.trigger.value.totalSeconds
+				alarm.relativeIsBefore = alarm.relativeTrigger < 0
+
+				console.debug(alarm.alarmComponent.toICALJs().toString())
+			}
+			this.updateAlarmAllDayParts({ alarm })
+		},
+
+		/**
+		 * Changes whether a timed reminder fires before or after the
+		 * event; the amount and the unit stay
+		 *
+		 * @param {object} data destructuring object
+		 * @param {object} data.alarm The alarm object
+		 * @param {boolean} data.isBefore Whether the reminder fires before the event
+		 */
+		changeAlarmDirectionTimed({
+			alarm,
+			isBefore,
+		}) {
+			if (alarm.alarmComponent) {
+				alarm.alarmComponent.trigger.value.totalSeconds
+					= getTotalSecondsFromAmountAndUnitForTimedEvents(alarm.relativeAmountTimed, alarm.relativeUnitTimed, isBefore)
+
+				alarm.relativeTrigger = alarm.alarmComponent.trigger.value.totalSeconds
+				alarm.relativeIsBefore = alarm.relativeTrigger < 0
 
 				console.debug(alarm.alarmComponent.toICALJs().toString())
 			}
@@ -2007,16 +2039,56 @@ export default defineStore('calendarObjectInstance', {
 			amount,
 		}) {
 			if (alarm.alarmComponent) {
+				// While the amount was 0 (reminder on the day of the event)
+				// the direction choice is hidden, so a new amount starts
+				// over with the default direction: before the event
+				const isBefore = alarm.relativeAmountAllDay === 0
+					? true
+					: alarm.relativeIsBefore
+
 				alarm.alarmComponent.trigger.value.totalSeconds
 					= getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(
 						amount,
 						alarm.relativeHoursAllDay,
 						alarm.relativeMinutesAllDay,
 						alarm.relativeUnitAllDay,
+						isBefore,
 					)
 
 				alarm.relativeAmountAllDay = amount
 				alarm.relativeTrigger = alarm.alarmComponent.trigger.value.totalSeconds
+				alarm.relativeIsBefore = alarm.relativeTrigger < 0
+
+				console.debug(alarm.alarmComponent.toICALJs().toString())
+			}
+
+			this.updateAlarmTimedParts({ alarm })
+		},
+
+		/**
+		 * Changes whether an all-day reminder fires before or after the
+		 * event; the amount and the time of day stay
+		 *
+		 * @param {object} data destructuring object
+		 * @param {object} data.alarm The alarm object
+		 * @param {boolean} data.isBefore Whether the reminder fires before the event
+		 */
+		changeAlarmDirectionAllDay({
+			alarm,
+			isBefore,
+		}) {
+			if (alarm.alarmComponent) {
+				alarm.alarmComponent.trigger.value.totalSeconds
+					= getTotalSecondsFromAmountHourMinutesAndUnitForAllDayEvents(
+						alarm.relativeAmountAllDay,
+						alarm.relativeHoursAllDay,
+						alarm.relativeMinutesAllDay,
+						alarm.relativeUnitAllDay,
+						isBefore,
+					)
+
+				alarm.relativeTrigger = alarm.alarmComponent.trigger.value.totalSeconds
+				alarm.relativeIsBefore = alarm.relativeTrigger < 0
 
 				console.debug(alarm.alarmComponent.toICALJs().toString())
 			}
@@ -2035,6 +2107,7 @@ export default defineStore('calendarObjectInstance', {
 						alarm.relativeHoursAllDay,
 						alarm.relativeMinutesAllDay,
 						unit,
+						alarm.relativeIsBefore,
 					)
 
 				alarm.relativeUnitAllDay = unit
@@ -2058,6 +2131,7 @@ export default defineStore('calendarObjectInstance', {
 						hours,
 						minutes,
 						alarm.relativeUnitAllDay,
+						alarm.relativeIsBefore,
 					)
 
 				alarm.relativeHoursAllDay = hours
